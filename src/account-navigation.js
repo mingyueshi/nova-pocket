@@ -65,6 +65,56 @@ function indexUrl(tab) {
   return '/' + indexPath + (tab === firstTab ? '' : '?tab=' + tab)
 }
 
+// Only reconstruct registered account screens. No arbitrary URL is accepted from an auth query.
+export function accountTarget(view, id, tab) {
+  if (!isTab(view) && !isDetail(view) && view !== 'profile') return null
+  return { view, id: typeof id === 'string' ? id : '', tab: isTab(view) ? view : detailTab(view, tab) }
+}
+
+export function pageRecordId(value, platform = process.env.UNI_PLATFORM) {
+  if (typeof value !== 'string') return ''
+  // H5's router decodes the query. WeChat passes its page options through to onLoad.
+  if (platform !== 'mp-weixin') return value
+  try { return decodeURIComponent(value) }
+  catch { return value }
+}
+
+export function targetUrl(target) {
+  if (isTab(target.view)) return indexUrl(target.view)
+  if (target.view === 'profile') return profilePath + '?tab=' + target.tab
+  return detailUrl(target.view, target.id, target.tab)
+}
+
+export function authUrl(kind, target) {
+  const path = '/pages/auth/' + kind
+  if (!target) return path
+  const query = ['returnView=' + encodeURIComponent(target.view), 'returnTab=' + encodeURIComponent(target.tab)]
+  if (target.id) query.push('returnId=' + encodeURIComponent(target.id))
+  return path + '?' + query.join('&')
+}
+
+function previousAccountTarget(page) {
+  const query = page.options || page.$page?.options || {}
+  if (page.route === indexPath) return accountTarget(rootTab.value)
+  if ('/' + page.route === profilePath) return accountTarget('profile', '', query.tab)
+  if ('/' + page.route === detailPath) return accountTarget(query.view, pageRecordId(query.id), query.tab)
+  return null
+}
+
+export function leaveAuthPages(target = null) {
+  const pages = getCurrentPages()
+  let previous = pages.length - 2
+  while (previous >= 0 && pages[previous].route?.startsWith('pages/auth/')) previous--
+  if (previous >= 0) {
+    const origin = previousAccountTarget(pages[previous])
+    if (!target || (origin && targetUrl(origin) === targetUrl(target))) {
+      return uni.navigateBack({ delta: pages.length - previous - 1 })
+    }
+    if (pages.length - previous === 2) return uni.redirectTo({ url: targetUrl(target) })
+  }
+  return uni.reLaunch({ url: target ? targetUrl(target) : indexUrl(firstTab) })
+}
+
 export function returnToAccountHome() {
   return uni.reLaunch({ url: indexUrl(firstTab) })
 }

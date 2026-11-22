@@ -3,8 +3,8 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 import NovaIcon from './NovaIcon.vue'
 import config from '../pocket.config.js'
 import { auth } from '../adapters/index.js'
-import { account as accountData, authRoute, hint, state, themeColor } from '../state.js'
-const emit = defineEmits(['dirty', 'leave'])
+import { account as accountData, hint, state, themeColor } from '../state.js'
+const emit = defineEmits(['dirty', 'leave', 'open'])
 const props=defineProps({kind:{type:String,required:true}})
 const method=ref('password'), account=ref(''), code=ref(''), password=ref(''), nickname=ref(''), agree=ref(false), visible=ref(false), codeHint=ref(''), sending=ref(false), seconds=ref(0), error=ref(''), busy=ref(false)
 const completed = ref(false)
@@ -16,7 +16,7 @@ watch(
   { flush: 'sync' },
 )
 function openAuth(kind) {
-  if (!busy.value) authRoute(kind)
+  if (!busy.value) emit('open', kind)
 }
 const register=computed(()=>props.kind==='register'), recover=computed(()=>props.kind==='recover')
 const usesCode=computed(()=>register.value||recover.value||method.value==='code')
@@ -83,7 +83,7 @@ async function submit() {
     password.value = ''
     code.value = ''
     hint(recover.value ? '密码已重置' : register.value ? '账号已创建' : '已登录')
-    emit('leave', recover.value ? 'login' : 'home')
+    emit('leave', recover.value ? 'login' : 'authenticated')
   } catch (cause) {
     if (active) error.value = cause.message || '操作失败，请重试'
   } finally {

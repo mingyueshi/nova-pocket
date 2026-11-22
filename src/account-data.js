@@ -1,86 +1,95 @@
 import { reactive } from 'vue'
+import { createInbox } from './inbox.js'
 
-// Each store owns its requests. Responses from a previous session cannot populate a new inbox.
+export function isSessionExpired(error) {
+  return error?.code === 'SESSION_EXPIRED' || (error?.statusCode ?? error?.status ?? error?.response?.status) === 401
+}
+
 export function createAccountData(auth, messages, withMessages = true) {
-  const session = reactive({ user: null, status: 'idle', error: '' })
-  const inbox = reactive({ items: [], status: 'idle', error: '' })
-  let generation = 0
+  const session = reactive({ user: null, status: 'idle', error: '', expired: false, version: 0 })
+  const mailbox = createInbox(messages, error => {
+    if (isSessionExpired(error)) setSession(null, true)
+  })
   let authRequest = 0
-  const confirmedRead = new Set()
-  let listRequest
+  let restoring
+  let changing
 
-  function setSession(user) {
-    generation++
-    confirmedRead.clear()
-    listRequest = undefined
-    Object.assign(inbox, { items: [], status: 'idle', error: '' })
-    Object.assign(session, { user: user || null, status: 'ready', error: '' })
-    if (user && withMessages) loadMessages()
+  function setSession(user, expired = false) {
+    ++authRequest
+    restoring = undefined
+    session.version++
+    Object.assign(session, { user: user || null, status: 'ready', error: '', expired })
+    mailbox.reset(Boolean(user && withMessages))
+    if (user && withMessages) mailbox.loadMessages()
   }
 
-  async function restoreSession() {
+  function restoreSession() {
+    if (changing) return changing.catch(() => {})
+    if (restoring) return restoring
     const request = ++authRequest
-    Object.assign(session, { status: 'loading', error: '' })
-    try {
-      const user = await auth.getSession()
-      if (request === authRequest) setSession(user)
-    } catch (error) {
-      if (request === authRequest) Object.assign(session, { status: 'error', error: error.message || '账户加载失败' })
-    }
+    if (!session.user || session.status === 'error') session.status = 'loading'
+    session.error = ''
+    restoring = Promise.resolve().then(() => auth.getSession()).then(user => {
+      if (request !== authRequest) return
+      if (user && session.user && user.id === session.user.id) {
+        Object.assign(session, { user, status: 'ready', expired: false })
+        mailbox.loadMessages()
+      } else {
+        setSession(user, !user && (session.expired || Boolean(session.user)))
+      }
+    }).catch(error => {
+      if (request !== authRequest) return
+      if (isSessionExpired(error)) setSession(null, true)
+      else Object.assign(session, { status: 'error', error: error.message || '账户加载失败' })
+    }).finally(() => {
+      if (request === authRequest) restoring = undefined
+    })
+    return restoring
   }
 
-  async function authenticate(kind, form) {
-    const request = ++authRequest
-    const user = await auth[kind](form)
-    if (request === authRequest) setSession(user)
+  function changeSession(work) {
+    if (changing) return Promise.reject(new Error('账户状态正在更新，请稍后重试'))
+    ++authRequest
+    restoring = undefined
+    if (session.status === 'loading') session.status = 'ready'
+    changing = Promise.resolve().then(work).finally(() => { changing = undefined })
+    return changing
   }
 
-  async function logout() {
-    const request = ++authRequest
-    await auth.logout()
-    if (request === authRequest) setSession(null)
+  function authenticate(kind, form) {
+    // An invalid password is a form failure. A protected request's 401 may expire the old
+    // account while login is pending, but must not discard the new successful login.
+    return changeSession(async () => {
+      const user = await auth[kind](form)
+      if (!user || user.id == null) throw new Error('登录接口没有返回用户')
+      setSession(user)
+    })
+  }
+
+  function logout() {
+    return changeSession(async () => {
+      try {
+        await auth.logout()
+      } catch (error) {
+        if (!isSessionExpired(error)) throw error
+      }
+      setSession(null)
+    })
   }
 
   async function updateProfile(profile) {
-    const active = generation
-    const user = await auth.updateProfile(profile)
-    if (active === generation) session.user = user
-  }
-
-  function loadMessages() {
-    if (!session.user || !withMessages) return
-    if (listRequest) return listRequest
-    const active = generation
-    Object.assign(inbox, { status: 'loading', error: '' })
-    listRequest = Promise.resolve().then(() => messages.list()).then(items => {
-      if (active !== generation) return
-      if (!Array.isArray(items)) throw new Error('消息列表格式错误')
-      Object.assign(inbox, { items: items.map(item => ({ ...item, read: item.read || confirmedRead.has(item.id) })), status: 'ready' })
-    }).catch(error => {
-      if (active === generation) Object.assign(inbox, { status: 'error', error: error.message || '消息加载失败' })
-    }).finally(() => {
-      if (active === generation) listRequest = undefined
-    })
-    return listRequest
-  }
-
-  async function markRead(ids) {
-    const active = generation
-    const requested = new Set(ids)
-    const pending = inbox.items.filter(item => !item.read && requested.has(item.id)).map(item => item.id)
-    if (!pending.length) return
-    await messages.markRead(pending)
-    if (active !== generation) return
-    for (const id of pending) confirmedRead.add(id)
-    for (const item of inbox.items) {
-      if (confirmedRead.has(item.id)) item.read = true
+    const version = session.version
+    try {
+      const user = await auth.updateProfile(profile)
+      if (version !== session.version) throw new Error('账户状态已变更')
+      session.user = user
+    } catch (error) {
+      if (version === session.version && isSessionExpired(error)) setSession(null, true)
+      throw error
     }
   }
 
-  function useDemoSession(user) {
-    ++authRequest
-    setSession(user)
-  }
-
-  return { session, inbox, restoreSession, authenticate, logout, updateProfile, loadMessages, markRead, useDemoSession }
+  const { inbox, loadMessages, getMessage, markRead, markAllRead } = mailbox
+  return { session, inbox, restoreSession, authenticate, logout, updateProfile, loadMessages,
+    getMessage, markRead, markAllRead, useDemoSession: setSession }
 }

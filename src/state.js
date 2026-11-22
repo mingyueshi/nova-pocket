@@ -3,7 +3,7 @@ import { computed, reactive } from 'vue'
 import config from './pocket.config.js'
 import { auth, messages, demoSettingsEnabled } from './adapters/index.js'
 import { createAccountData } from './account-data.js'
-import { isTab } from './account-navigation.js'
+import { authUrl, isTab } from './account-navigation.js'
 
 export const account = createAccountData(auth, messages, isTab('messages'))
 
@@ -34,17 +34,9 @@ export function reset() {
   account.useDemoSession(auth.reset())
 }
 
-export function authRoute(key, replace = false) {
-  const url = '/pages/auth/' + key
+export function authRoute(key, replace = false, target = null) {
+  const url = authUrl(key, target)
   return replace ? uni.redirectTo({ url }) : uni.navigateTo({ url })
-}
-
-export function accountHome() {
-  const pages = getCurrentPages()
-  let previous = pages.length - 2
-  while (previous >= 0 && pages[previous].route?.startsWith('pages/auth/')) previous--
-  if (previous >= 0) return uni.navigateBack({ delta: pages.length - previous - 1 })
-  return uni.reLaunch({ url: '/pages/index/index' })
 }
 
 export function hint(title) {

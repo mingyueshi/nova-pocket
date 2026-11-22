@@ -47,7 +47,7 @@ import { request } from './my-request.js' // 接入方自己的请求函数
 export const { auth, messages } = createHttpAdapters(request)
 ```
 
-请求函数签名为 `request(method, path, body?)`，负责 API 地址、平台凭据和错误转换，成功时返回解包后的数据，失败时抛出带可展示消息的 `Error`。示例路径集中在 `src/adapters/http.js`。方法可以同步返回或返回 Promise。
+请求函数签名为 `request(method, path, body?)`，负责 API 地址、平台凭据和错误转换，成功时返回解包后的数据，失败时抛出带可展示消息的 `Error`，并保留 HTTP 状态码 `statusCode`、`status` 或 `response.status`。示例路径集中在 `src/adapters/http.js`。方法可以同步返回或返回 Promise。
 
 | 接口 | 输入及返回 |
 | --- | --- |
@@ -59,6 +59,25 @@ export const { auth, messages } = createHttpAdapters(request)
 | `messages.list()` | 当前用户的完整消息数组。每项含字符串 `id / title / date / body` 和布尔值 `read`。列表、详情及角标共用此数据 |
 | `messages.markRead(ids)` | 接收字符串 ID 数组，同一 ID 可重复提交。成功后更新角标，失败时保留未读并支持重试 |
 
+### 会话与返回页面
+
+首次打开及从后台回到前台时，应用会调用 `auth.getSession()`。已登录用户变成访客，或受保护的接口返回 HTTP 401 / `code: 'SESSION_EXPIRED'` 时，应用会清除该会话的消息和角标，提示重新登录。网络错误可在原页重试。登录表单收到的 401 会显示为凭据错误。
+
+从访客快捷入口、消息详情或过期提示进入认证时，登录、注册和找回页会携带目标视图、记录 ID 和底栏来源。登录页刷新后仍可恢复目标。只接受当前配置中可用的站内页面。
+
+### 游标分页
+
+完整数组适配器可以继续使用。启用分页时，在 `createHttpAdapters(request, { paginatedMessages: true })` 中传入第二个参数，或为自己的消息适配器提供以下方法。
+
+| 方法 | HTTP 示例与约定 |
+| --- | --- |
+| `listPage({ cursor, limit })` | `GET /messages?limit=20&cursor=…`。首页省略 cursor。返回 `{ items, nextCursor, unreadCount }`，末页的游标为 `null`，未读数覆盖整个收件箱 |
+| `get(id)` | `GET /messages/:id`。返回含正文的消息，找不到时返回 `null` 或抛出 404。分享链接可直接打开尚未加载到列表的记录 |
+| `markRead(ids)` | `POST /messages/read`，请求体为 `{ ids }`。成功后同步详情、列表和底栏角标 |
+| `markAllRead()` | `POST /messages/read-all`。作用于该用户的全部消息，包括尚未加载的页。两种已读操作均应支持重复调用，成功响应可返回最新的 `{ unreadCount }` |
+
+“加载更多”追加下一页，失败时保留现有列表并重试原游标。“只看未读”筛选已加载的记录，可继续翻页。“刷新”重新读取首页和全局未读数。
+
 本地演示适配器包含专用的示例邮箱与验证码。接入自己的认证适配器后，表单会将凭据交给该适配器，并隐藏演示填充按钮。
 
 ## 详情链接与演示状态
@@ -69,7 +88,7 @@ export const { auth, messages } = createHttpAdapters(request)
 - 评价 `/#/pages/account/detail?view=review&id=NP-1038`
 - 消息 `/#/pages/account/detail?view=message&id=welcome`
 
-小程序页面路径以 `/pages/account/detail` 开头。详情页刷新后仍打开同一示例记录，昵称、登录状态、已读和提交的评价随新演示会话重置。
+小程序页面路径以 `/pages/account/detail` 开头。内置演示共用一个虚构账号，其昵称、登录或退出状态和消息已读记录保存在本机，演示登录有效期为 7 天。密码与验证码仅用于当前表单和校验。可以在「我的 → 演示设置」重置演示数据。订单评价仍按本次运行保存。
 
 ## 校验
 
@@ -86,7 +105,7 @@ npm run icons:check
 - `src/pages/index/index.vue` 管理概览、服务、消息和我的四个底栏入口。`src/pages/account/` 注册详情与资料编辑页面。
 - `src/pages/auth/`：登录、注册和找回，公共表单在 `src/components/AuthScreen.vue`。
 - `src/components/Service*.vue`：订单、统计图表与评论演示。
-- `src/account-data.js` 管理会话和收件箱。`src/adapters/demo.js` 与 `src/service-demo.js` 提供默认示例数据。
+- `src/account-data.js` 管理会话，`src/inbox.js` 管理收件箱分页和已读同步。`src/adapters/demo.js` 与 `src/service-demo.js` 提供默认示例数据。
 - `src/static/icons/LICENSE.txt`：Lucide 图标许可。
 
 最初归档标注的上游源码基线为 `07ba6ab98d4e29cefbc96227ad0dc4951fef1a9b`。原 Git 历史未随归档导入，提交哈希需在上游仓库核对。

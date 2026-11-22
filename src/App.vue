@@ -1,6 +1,8 @@
 <script>
 import { account } from './state.js'
-export default { onLaunch() { account.restoreSession() } }
+export default {
+  onShow() { account.restoreSession() },
+}
 </script>
 <style>
 page,body{margin:0;background:#f4f6fa;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#23283a}

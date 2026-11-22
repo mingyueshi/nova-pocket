@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import AccountScreen from '../../components/AccountScreen.vue'
-import { backFromAccountView, detailTab, showAccountTab } from '../../account-navigation.js'
+import { accountTarget, backFromAccountView, detailTab, showAccountTab } from '../../account-navigation.js'
 import { account, authRoute, hint, state } from '../../state.js'
 import { useLeaveConfirmation } from '../../use-leave-confirmation.js'
 
@@ -23,8 +23,9 @@ onLoad(query => {
   loadDraft()
 })
 
-watch(guest, isGuest => {
-  if (!isGuest) loadDraft()
+watch(() => account.session.user?.id, () => {
+  error.value = ''
+  loadDraft()
 })
 
 const leave = useLeaveConfirmation(
@@ -70,7 +71,7 @@ async function save() {
     <template #profile>
       <view v-if="guest" class="panel">
         <text class="profile-title">请先登录账号</text>
-        <button class="btn profile-action" @tap="authRoute('login')">去登录</button>
+        <button class="btn profile-action" @tap="authRoute('login', false, accountTarget('profile', '', tab))">去登录</button>
       </view>
       <view v-else class="panel profile">
         <text class="profile-title">展示昵称</text>

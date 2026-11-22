@@ -4,15 +4,57 @@ const demoUser = () => ({ id: 'demo', nickname: '演示用户', mode: 'member' }
 const notifications = [
   { id: 'welcome', title: '欢迎使用 ' + config.brand.name, date: '刚刚', body: '这里演示通用账户通知、阅读状态和消息详情，不连接真实消息服务。' },
   { id: 'security', title: '账号安全检查', date: '今天', body: '实际产品可提醒用户查看设备、登录记录和安全设置。当前只是示例。' },
-  { id: 'profile', title: '个人资料提示', date: '昨天', body: '用户可随时编辑昵称。原型只保存当前页面的模拟状态。' },
+  { id: 'profile', title: '个人资料提示', date: '昨天', body: '用户可随时编辑昵称。可在账户中心管理展示昵称。' },
+  { id: 'appearance', title: '账户外观设置', date: '上周', body: '前往账户设置可以调整主题。' },
+  { id: 'guide', title: '账户中心使用指南', date: '上周', body: '通过底栏可以浏览服务、查看通知和管理资料。' },
 ]
+const initiallyRead = ['profile', 'appearance', 'guide']
+const sessionDuration = 7 * 24 * 60 * 60 * 1000
 
-export function createDemoAdapters() {
+export function createDemoAdapters(storage) {
   let user = demoUser()
   let guest = false
-  const read = new Set(['profile'])
+  let read = new Set(initiallyRead)
+  let expiresAt = Date.now() + sessionDuration
   const codes = new Map()
 
+  function persist() {
+    storage?.save({ version: 1, user: { ...user }, guest, expiresAt, read: [...read] })
+  }
+  function restore() {
+    const saved = storage?.load()
+    if (saved?.version === 1 && saved.user?.id === 'demo' && typeof saved.user.nickname === 'string' &&
+        ['member', 'incomplete'].includes(saved.user.mode) && typeof saved.guest === 'boolean' &&
+        Number.isFinite(saved.expiresAt) && Array.isArray(saved.read)) {
+      user = { ...saved.user }
+      guest = saved.guest
+      expiresAt = saved.expiresAt
+      read = new Set(saved.read)
+    }
+    if (!guest && Date.now() >= expiresAt) {
+      const error = new Error('登录已过期，请重新登录')
+      error.code = 'SESSION_EXPIRED'
+      throw error
+    }
+  }
+  function signIn() {
+    guest = false
+    expiresAt = Date.now() + sessionDuration
+    persist()
+    return { ...user }
+  }
+  function checkSession() {
+    restore()
+    if (guest) {
+      const error = new Error('请先登录')
+      error.code = 'SESSION_EXPIRED'
+      throw error
+    }
+  }
+  function list() {
+    checkSession()
+    return notifications.map(item => ({ ...item, read: read.has(item.id) }))
+  }
   function checkAccount(account) {
     if (!/^[^\s@]+@example\.test$/i.test(account)) throw new Error('请使用虚构邮箱，例如 demo@example.test。')
   }
@@ -23,7 +65,7 @@ export function createDemoAdapters() {
   return {
     auth: {
       demo: true,
-      getSession: () => guest ? null : { ...user },
+      getSession() { restore(); persist(); return guest ? null : { ...user } },
       sendCode({ account, purpose }) {
         checkAccount(account)
         codes.set(purpose + ':' + account, true)
@@ -33,16 +75,14 @@ export function createDemoAdapters() {
         checkAccount(account)
         if (method === 'code') checkCode(account, 'login', code)
         else if (!password || password.length < 8) throw new Error('演示密码至少需要 8 个字符。')
-        guest = false
-        return { ...user }
+        return signIn()
       },
       register({ account, code, password, nickname }) {
         checkAccount(account)
         if (password.length < 8) throw new Error('演示密码至少需要 8 个字符。')
         checkCode(account, 'register', code)
         user = { ...demoUser(), nickname }
-        guest = false
-        return { ...user }
+        return signIn()
       },
       recover({ account, code, password }) {
         checkAccount(account)
@@ -50,22 +90,34 @@ export function createDemoAdapters() {
         checkCode(account, 'recover', code)
       },
       updateProfile({ nickname }) {
+        checkSession()
         user = { ...user, nickname, mode: 'member' }
+        persist()
         return { ...user }
       },
-      logout() { guest = true; codes.clear() },
+      logout() { guest = true; codes.clear(); persist() },
       setMode(mode) {
         guest = mode === 'guest'
-        if (!guest) user.mode = mode
-        return guest ? null : { ...user }
+        if (!guest) { user.mode = mode; return signIn() }
+        persist()
+        return null
       },
-      reset() { user = demoUser(); guest = false; codes.clear(); return { ...user } },
+      reset() { user = demoUser(); codes.clear(); return signIn() },
     },
     messages: {
       demo: true,
-      list: () => notifications.map(item => ({ ...item, read: read.has(item.id) })),
-      markRead(ids) { for (const id of ids) read.add(id) },
-      reset() { read.clear(); read.add('profile') },
+      list,
+      listPage({ cursor, limit }) {
+        const all = list()
+        const start = cursor ? all.findIndex(item => item.id === cursor) + 1 : 0
+        const items = all.slice(start, start + Math.min(3, limit))
+        const nextCursor = start + items.length < all.length ? items[items.length - 1].id : null
+        return { items, nextCursor, unreadCount: all.filter(item => !item.read).length }
+      },
+      get: id => list().find(item => item.id === id) || null,
+      markRead(ids) { checkSession(); for (const id of ids) read.add(id); persist() },
+      markAllRead() { checkSession(); read = new Set(notifications.map(item => item.id)); persist() },
+      reset() { read = new Set(initiallyRead); persist() },
     },
   }
 }

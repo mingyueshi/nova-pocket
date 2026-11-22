@@ -2,9 +2,9 @@
 import AuthScreen from '../../components/AuthScreen.vue'
 import { useAuthPage } from '../../use-auth-page.js'
 
-const { setDirty, leaveAuth } = useAuthPage()
+const { setDirty, leaveAuth, openAuth } = useAuthPage()
 </script>
 
 <template>
-  <AuthScreen kind="recover" @dirty="setDirty" @leave="leaveAuth" />
+  <AuthScreen kind="recover" @open="openAuth" @dirty="setDirty" @leave="leaveAuth" />
 </template>

@@ -15,7 +15,7 @@ import MessagePanel from './MessagePanel.vue'
 import StatePanel from './StatePanel.vue'
 import config from '../pocket.config.js'
 import { auth, demoSettingsEnabled } from '../adapters/index.js'
-import { requiresLogin, isTab, openAccountView, returnToAccountHome, services, shortcuts, tabs, viewNames } from '../account-navigation.js'
+import { accountTarget, requiresLogin, isTab, openAccountView, returnToAccountHome, services, shortcuts, tabs, viewNames } from '../account-navigation.js'
 // #ifndef POCKET_NO_RECORDS
 import { resetServiceDemo } from '../service-demo.js'
 // #endif
@@ -34,7 +34,7 @@ const tone = computed(() => state.theme === 'dark' ? 'light' : 'muted')
 const activeTone = computed(() => state.theme === 'dark' ? 'light' : 'blue')
 const identity = computed(() => guest.value ? '你好，访客' : state.nickname)
 const role = computed(() => guest.value ? '浏览账户中心' : state.mode === 'incomplete' ? '资料待完善' : (auth.demo ? '演示账号' : '已登录'))
-const unread = computed(() => account.inbox.items.filter(item => !item.read).length)
+const unread = computed(() => account.inbox.unreadCount)
 const scrollTo = ref(0)
 let scrollPosition = 0
 
@@ -48,11 +48,15 @@ function storeScroll(event) {
   scrollPosition = event.detail.scrollTop
 }
 
+function openAuth(kind, view = props.route, id = props.recordId) {
+  return authRoute(kind, false, accountTarget(view, id, props.tab))
+}
+
 function page(dest, id) {
   if (isTab(dest)) {
     emit('select-tab', dest)
   } else if (dest === 'login' || (guest.value && ['profile', 'security', 'activity'].includes(dest))) {
-    authRoute('login')
+    openAuth('login', dest === 'login' ? props.route : dest, id)
   } else {
     openAccountView(dest, id, props.tab)
   }
@@ -111,14 +115,18 @@ function explain(title, content) {
 
    <StatePanel v-if="account.session.status==='loading' || account.session.status==='idle'" title="正在加载账户…" />
    <StatePanel v-else-if="account.session.status==='error'" title="暂时无法加载账户" :detail="account.session.error" action="重试" @action="account.restoreSession" />
-   <StatePanel v-else-if="guest && requiresLogin(route)" title="登录后可查看这项服务" action="去登录" @action="authRoute('login')" />
+   <view v-else-if="account.session.expired" class="np-stack">
+    <StatePanel title="登录已过期" detail="重新登录后可继续查看当前页面。" action="重新登录" @action="openAuth('login')" />
+    <button class="link" @tap="account.session.expired=false">继续以访客身份浏览</button>
+   </view>
+   <StatePanel v-else-if="guest && requiresLogin(route)" title="登录后可查看这项服务" action="去登录" @action="openAuth('login')" />
    <view v-else-if="route==='home'||route==='mine'" class="account-grid">
     <view class="hero" :class="{'compact':isHome&&state.layout!=='overview','push':isHome&&state.layout==='shortcuts'}">
      <view class="orbit" aria-hidden="true"><view></view><view></view><view></view><image v-if="config.brand.logo" :src="config.brand.logo" mode="aspectFit" class="brand-logo" /><NovaIcon v-else name="sparkles" tone="white" :size="52" /></view>
      <view class="identity"><view class="avatar" aria-hidden="true">{{avatar}}</view><view><text class="hero-name">{{identity}}</text><text class="hero-note">{{role}}</text></view></view>
      <view class="actions">
-      <button v-if="guest" class="hero-btn" @tap="authRoute('login')">登录</button>
-      <button v-if="guest" class="hero-btn secondary-hero" @tap="authRoute('register')">注册</button>
+      <button v-if="guest" class="hero-btn" @tap="openAuth('login')">登录</button>
+      <button v-if="guest" class="hero-btn secondary-hero" @tap="openAuth('register')">注册</button>
       <button v-if="!guest" class="hero-btn" @tap="page('profile')">{{state.mode==='incomplete'?'完善资料':'编辑资料'}}</button>
      </view>
     </view>
@@ -167,7 +175,7 @@ function explain(title, content) {
    <!-- #endif -->
 
    <view v-else-if="route==='messages' || route==='message'" class="details">
-    <MessagePanel :detail="route==='message'" :record-id="recordId" :active="active" :tone="tone" @open="page('message', $event)" />
+    <MessagePanel :detail="route==='message'" :record-id="recordId" :active="active" :tone="tone" @login="openAuth('login')" @open="page('message', $event)" />
    </view>
 
    <view v-else class="details">
@@ -179,14 +187,14 @@ function explain(title, content) {
       </picker>
      </view>
      <view class="actions extra"><button v-if="isTab('home')" class="btn primary" @tap="$emit('select-tab', 'home')">查看概览</button><button v-if="isTab('messages')" class="btn" @tap="$emit('select-tab', 'messages')">查看消息</button><button class="link" @tap="restore">重置演示</button></view>
-     <view class="rows extra"><NovaRow icon="log-in" label="登录页演示" :tone="tone" @select="authRoute('login')" /><NovaRow icon="user-round" label="注册页演示" :tone="tone" @select="authRoute('register')" /></view>
+     <view class="rows extra"><NovaRow icon="log-in" label="登录页演示" :tone="tone" @select="openAuth('login')" /><NovaRow icon="user-round" label="注册页演示" :tone="tone" @select="openAuth('register')" /></view>
     </view>
     <view v-else-if="route==='profile'"><slot name="profile" /></view>
     <view v-else-if="route==='settings'" class="rows">
      <view class="pick-row"><text>接收通知</text><switch :checked="state.notices" :color="themeColor" aria-label="接收通知" @change="state.notices=$event.detail.value" /></view>
      <picker :range="themes.map(v=>v[1])" :value="option('theme',themes)" @change="select('theme',themes,$event)"><view class="pick-row"><text>外观</text><text class="pick-value">{{themes[option('theme',themes)][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
      <NovaRow icon="shield-check" label="隐私说明" :tone="tone" @select="page('privacy')" />
-     <NovaRow :icon="guest?'log-in':'log-out'" :label="guest?'登录':'退出登录'" :tone="tone" @select="guest?authRoute('login'):logout()" />
+     <NovaRow :icon="guest?'log-in':'log-out'" :label="guest?'登录':'退出登录'" :tone="tone" @select="guest?openAuth('login'):logout()" />
     </view>
     <view v-else-if="route==='security'&&!guest" class="rows">
      <NovaRow icon="monitor" label="登录设备" :tone="tone" @select="explain('登录设备','这里只有一个模拟会话，不读取真实设备。')" />
@@ -200,7 +208,7 @@ function explain(title, content) {
     <view v-else-if="guest&&['security','activity'].includes(route)" class="panel">
      <text class="section-title">请先登录账号</text><button class="btn extra" @tap="page('login')">去登录</button>
     </view>
-    <view v-else-if="route==='privacy'" class="panel"><text class="section-title">隐私说明</text><text class="note extra">{{auth.demo && demoSettingsEnabled ? '演示账号和消息只保存在本次会话中。' : '有关账号和通知的数据处理方式，请查阅服务提供方的隐私政策。'}}</text></view>
+    <view v-else-if="route==='privacy'" class="panel"><text class="section-title">隐私说明</text><text class="note extra">{{auth.demo && demoSettingsEnabled ? '本机保存演示会话、昵称和消息已读状态，可在演示设置中重置。' : '有关账号和通知的数据处理方式，请查阅服务提供方的隐私政策。'}}</text></view>
     <view v-else-if="route==='help'" class="panel"><text class="section-title">使用帮助</text><text class="note extra">底部可以切换{{navigationLabels}}。</text></view>
     <StatePanel v-else title="页面不可用" detail="这个入口可能已关闭或链接有误。" action="返回账户中心" @action="returnToAccountHome" />
    </view>

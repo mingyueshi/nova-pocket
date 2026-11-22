@@ -9,6 +9,7 @@
   },
   "scripts": {
     "create": "node scripts/create-reading-room.js",
+    "pack:creator": "node scripts/pack-creator.js",
     "dev:h5": "node scripts/uni.js",
     "build:h5": "node scripts/uni.js build",
     "build:mp-weixin": "node scripts/uni.js build -p mp-weixin",

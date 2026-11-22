@@ -24,8 +24,10 @@ jobs:
       - run: npm run icons:check
       - run: npm run build:h5
       - run: npm run build:mp-weixin
-  standalone:
+  pack:
     runs-on: ubuntu-latest
+    outputs:
+      reference_checksums: ${{ steps.reference.outputs.checksums }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -33,11 +35,56 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-          cache: npm
-      - name: Create the reading room outside the checkout
-        run: npm run create -- "$RUNNER_TEMP/reading-room"
+      - run: npm run pack:creator
+      - name: Record expected contents from the source template
+        id: reference
+        run: |
+          npm run create -- "$RUNNER_TEMP/reference"
+          cd "$RUNNER_TEMP/reference"
+          {
+            echo 'checksums<<END'
+            sha256sum package.json package-lock.json .gitignore server.js README.md LICENSE src/static/icons/LICENSE.txt
+            echo 'END'
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: reading-room-creator
+          path: dist/creator/*.tgz
+          if-no-files-found: error
+  standalone:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: reading-room-creator
+          path: ${{ runner.temp }}/consumer
+      - name: Create from the local tarball and protect downstream edits
+        working-directory: ${{ runner.temp }}/consumer
+        env:
+          REFERENCE_CHECKSUMS: ${{ needs.pack.outputs.reference_checksums }}
+        run: |
+          packages=(./create-nova-pocket-*.tgz)
+          test "${#packages[@]}" -eq 1
+          test -f "${packages[0]}"
+          tar -xOzf "${packages[0]}" package/README.md > creator-readme
+          grep -F 'npm exec --offline' creator-readme
+          create=(npm exec --offline --yes --package="${packages[0]}" -- create-nova-pocket)
+          "${create[@]}" ./reading-room
+          (cd reading-room && printf '%s\n' "$REFERENCE_CHECKSUMS" | sha256sum -c -)
+          echo '下游书房说明' >> reading-room/README.md
+          cp reading-room/README.md expected-readme
+          if "${create[@]}" ./reading-room; then
+            echo "创建器应拒绝覆盖已有项目" >&2
+            exit 1
+          fi
+          cmp expected-readme reading-room/README.md
       - name: Install and customize the generated project
-        working-directory: ${{ runner.temp }}/reading-room
+        working-directory: ${{ runner.temp }}/consumer/reading-room
         run: |
           npm ci
           node --input-type=module <<'JS'
@@ -51,13 +98,13 @@ jobs:
           npm run lint
           npm run icons:check
       - name: Build H5 and verify both readers using the same shared link
-        working-directory: ${{ runner.temp }}/reading-room
+        working-directory: ${{ runner.temp }}/consumer/reading-room
         run: |
           npm run build:h5
           npx --no-install playwright-core install --with-deps --only-shell chromium
           npm run check:h5
       - name: Build WeChat and verify the brand and optional modules
-        working-directory: ${{ runner.temp }}/reading-room
+        working-directory: ${{ runner.temp }}/consumer/reading-room
         run: |
           npm run build:mp-weixin
           node --input-type=module <<'JS'

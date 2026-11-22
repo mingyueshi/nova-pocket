@@ -22,6 +22,24 @@ npm ci
 
 创建命令接受新目录或空目录，遇到已有文件、非空目录或作为目标的符号链接会退出。生成后的启动、换品牌、双读者验收和构建步骤见新项目的 README。[仓库内示例与接入说明](examples/reading-room/README.md)
 
+### 分发青禾书房创建器
+
+在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、完整模板和两份使用说明打成一个版本包，输出在 `dist/creator/`。
+
+```sh
+npm run pack:creator
+```
+
+把生成的 `.tgz` 交给下游开发者。对方将它放在自己的工作目录，按实际文件名运行以下命令即可创建项目。创建器从本地包读取模板，应用依赖随后由 `npm ci` 安装。
+
+```sh
+npm exec --offline --yes --package=./create-nova-pocket-0.1.0.tgz -- create-nova-pocket ./my-reading-room
+cd my-reading-room
+npm ci
+```
+
+包内的 `package/README.md` 说明如何创建项目，生成后的 `my-reading-room/README.md` 说明如何启动 API、换品牌以及做双端验收。[创建器使用说明](scripts/creator/README.md)
+
 ## 构建
 
 ```bash
@@ -129,7 +147,7 @@ npm run icons:check
 
 图标名单在 `src/icons.js`。更新 Lucide 或调整图标名单后，运行 `npm run icons:sync` 生成色调变体，并提交对应资源。
 
-CI 还会在仓库外生成独立项目，执行 `npm ci`，更换品牌，使用 Chromium 验证两位读者打开同一条借阅分享链接，并检查微信产物的品牌和模块裁剪。[本地复现方法](examples/reading-room/standalone.md#构建和验收)
+CI 将打好的 `.tgz` 交给没有检出源码的独立任务。该任务离线创建项目，对照源码生成的基准核验锁文件、示例 API、README 和两份许可证，检查重复创建会保留下游编辑。随后从 `npm ci` 开始，换品牌，在 Chromium 中用两位读者打开同一条借阅分享链接，并核对 H5 和微信小程序的构建产物。[生成项目的验收步骤](examples/reading-room/standalone.md#构建和验收)
 
 ## 项目结构
 

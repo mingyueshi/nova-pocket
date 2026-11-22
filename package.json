@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:h5": "uni",
-    "build:h5": "uni build",
-    "build:mp-weixin": "uni build -p mp-weixin",
+    "dev:h5": "node scripts/uni.js",
+    "build:h5": "node scripts/uni.js build",
+    "build:mp-weixin": "node scripts/uni.js build -p mp-weixin",
     "lint": "eslint src scripts test vite.config.js",
     "test": "node --test",
     "icons:sync": "node scripts/sync-icons.js",

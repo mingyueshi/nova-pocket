@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import FilterTabs from './FilterTabs.vue'
 import NovaIcon from './NovaIcon.vue'
 import { findServiceOrder, serviceDemo, serviceOrders } from '../service-demo.js'
 
@@ -41,17 +42,13 @@ function open(view, id) {
 </script>
 
 <template>
-  <view v-if="view === 'reviews'" class="review-flow">
+  <view v-if="view === 'reviews'" class="np-stack">
     <text class="note">已完成的示例订单可以评分和留言。</text>
-    <view class="review-filters" role="group" aria-label="评价状态">
-      <button v-for="[code, label] in options" :key="code" class="review-filter"
-        :class="{ chosen: serviceDemo.reviewFilter === code }"
-        :aria-pressed="serviceDemo.reviewFilter === code" @click="serviceDemo.reviewFilter = code">{{ label }}</button>
-    </view>
+    <FilterTabs :options="options" :value="serviceDemo.reviewFilter" label="评价状态" @select="serviceDemo.reviewFilter = $event" />
     <button v-for="item in orders" :key="item.id" class="panel review-card" @click="open('review', item.id)">
       <view class="review-card-main">
         <view class="review-mark"><NovaIcon name="sparkles" tone="blue" :size="19" /></view>
-        <view class="review-copy">
+        <view class="np-grow">
           <text class="review-name">{{ item.title }}</text>
           <text class="note review-meta">{{ item.kind }} · {{ item.date }}</text>
         </view>
@@ -64,19 +61,19 @@ function open(view, id) {
     </button>
     <view v-if="!orders.length" class="panel"><text class="note">这个状态暂没有示例评价。</text></view>
   </view>
-  <view v-else-if="order && order.status === 'complete'" class="review-flow">
-    <view class="panel review-summary">
+  <view v-else-if="order && order.status === 'complete'" class="np-stack">
+    <view class="panel np-stack">
       <text class="eyebrow">{{ saved ? '已评价' : '发表评价' }}</text>
       <text class="review-name">{{ order.title }}</text>
       <text class="note">{{ order.kind }} · {{ order.id }}</text>
     </view>
-    <view v-if="saved" class="panel review-summary">
+    <view v-if="saved" class="panel np-stack">
       <text v-if="submitted" class="badge" role="status">示例评价已保存</text>
       <text class="review-score">{{ saved.rating }} / 5 星</text>
       <text class="note review-text">{{ saved.content || '未填写评语。' }}</text>
       <text class="note">{{ saved.date }} · 仅本次演示可见</text>
     </view>
-    <view v-else class="panel review-summary">
+    <view v-else class="panel np-stack">
       <text class="review-name">为本次体验评分</text>
       <view class="review-stars" role="group" aria-label="星级评分">
         <button v-for="value in stars" :key="value" class="review-star" :class="{ selected: value <= rating }"
@@ -95,15 +92,10 @@ function open(view, id) {
 </template>
 
 <style scoped>
-.review-flow,.review-summary{display:flex;flex-direction:column;gap:11px}
-.review-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.review-filter{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:44px;padding:6px;line-height:1.4;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:650}
-.review-filter.chosen{background:var(--soft);border-color:var(--brand);color:var(--brand)}
 .review-card{display:flex;flex-direction:column;gap:12px;align-items:stretch;width:100%;text-align:left}
 .review-card:active{background:var(--soft)}
 .review-card-main,.review-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .review-card-foot{flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
-.review-copy{min-width:0;flex:1}
 .review-mark{display:flex;align-items:center;justify-content:center;width:41px;height:41px;flex:none;border-radius:11px;background:var(--soft)}
 .review-name{display:block;font-size:16px;font-weight:740;overflow-wrap:anywhere}
 .review-meta{font-size:13px;margin-top:2px}

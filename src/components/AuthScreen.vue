@@ -1,12 +1,15 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
 import NovaIcon from './NovaIcon.vue'
-import { authRoute, hint, state, themeColor } from '../state.js'
+import config from '../pocket.config.js'
+import { auth } from '../adapters/index.js'
+import { account as accountData, authRoute, hint, state, themeColor } from '../state.js'
 const emit = defineEmits(['dirty', 'leave'])
 const props=defineProps({kind:{type:String,required:true}})
-const method=ref('password'), account=ref(''), code=ref(''), password=ref(''), nickname=ref(''), agree=ref(false), visible=ref(false), dispatched=ref(false), seconds=ref(0), error=ref(''), busy=ref(false)
+const method=ref('password'), account=ref(''), code=ref(''), password=ref(''), nickname=ref(''), agree=ref(false), visible=ref(false), codeHint=ref(''), sending=ref(false), seconds=ref(0), error=ref(''), busy=ref(false)
 const completed = ref(false)
-let timer, submitTimer
+let timer
+let active = true
 watch(
   () => !completed.value && Boolean(account.value || code.value || password.value || nickname.value || agree.value),
   dirty => emit('dirty', dirty),
@@ -18,66 +21,107 @@ function openAuth(kind) {
 const register=computed(()=>props.kind==='register'), recover=computed(()=>props.kind==='recover')
 const usesCode=computed(()=>register.value||recover.value||method.value==='code')
 const title=computed(()=>register.value?'创建账号':recover.value?'找回密码':'欢迎回来')
-const actionLabel=computed(()=>register.value?'创建演示账号':recover.value?'重置演示密码':'登录')
+const actionLabel=computed(()=>register.value?'创建账号':recover.value?'重置密码':'登录')
 const tone=computed(()=>state.theme==='dark'?'light':'muted')
-const emailOk=()=>/^[^\s@]+@example\.test$/i.test(account.value.trim())
-function mockFields(){account.value='demo@example.test';nickname.value='新用户';password.value='NovaDemo2026';error.value=''}
-function setMethod(v){method.value=v;error.value='';code.value=''}
-function sendCode(){if(seconds.value)return;if(!emailOk()){error.value='请输入以 @example.test 结尾的虚构邮箱。';return}
- dispatched.value=true;seconds.value=30;error.value='';clearInterval(timer);timer=setInterval(()=>{if(--seconds.value<=0)clearInterval(timer)},1000);
+function mockFields() {
+  account.value = 'demo@example.test'
+  nickname.value = '新用户'
+  password.value = 'NovaDemo2026'
+  error.value = ''
 }
-function selectTerms(v){agree.value=v.detail.value.includes('yes')}
-function submit(){
- if(busy.value)return
- error.value=''
- if(!emailOk()){error.value='请使用虚构邮箱，例如 demo@example.test。';return}
- if(usesCode.value&&(!dispatched.value||code.value.trim()!=='246810')){error.value='请先生成演示验证码，再输入 246810。';return}
- if((register.value||recover.value||method.value==='password')&&password.value.length<8){error.value='演示密码至少需要 8 个字符。';return}
- if(register.value&&(!nickname.value.trim()||Array.from(nickname.value.trim()).length>20)){error.value='请输入 1–20 个字符的虚构昵称。';return}
- if(register.value&&!agree.value){error.value='请先勾选同意演示说明。';return}
- busy.value=true
- submitTimer=setTimeout(()=>{
-  completed.value = true
-  busy.value = false
-  password.value = ''
+function setMethod(value) {
+  method.value = value
+  error.value = ''
   code.value = ''
-  if (recover.value) {
-    hint('演示重置已完成')
-    emit('leave', 'login')
-    return
-  }
-  if (register.value) state.nickname = nickname.value.trim()
-  state.mode = 'member'
-  hint(register.value ? '演示账号已创建' : '已登录演示账号')
-  emit('leave', 'home')
- },250)
 }
-onUnmounted(()=>{clearInterval(timer);clearTimeout(submitTimer);password.value='';code.value=''})
+async function sendCode() {
+  if (seconds.value || sending.value) return
+  const email = account.value.trim()
+  if (!email) { error.value = '请输入邮箱。'; return }
+  sending.value = true
+  error.value = ''
+  codeHint.value = ''
+  try {
+    const result = await auth.sendCode({ account: email, purpose: props.kind })
+    if (!active || email !== account.value.trim()) return
+    codeHint.value = result?.hint || '验证码已发送。'
+    seconds.value = 30
+    clearInterval(timer)
+    timer = setInterval(() => { if (--seconds.value <= 0) clearInterval(timer) }, 1000)
+  } catch (cause) {
+    if (active) error.value = cause.message || '验证码发送失败，请重试'
+  } finally {
+    sending.value = false
+  }
+}
+function selectTerms(event) { agree.value = event.detail.value.includes('yes') }
+async function submit() {
+  if (busy.value) return
+  error.value = ''
+  const form = { account: account.value.trim() }
+  if (!form.account) { error.value = '请输入邮箱。'; return }
+  if (usesCode.value) {
+    form.code = code.value.trim()
+    if (!form.code) { error.value = '请输入验证码。'; return }
+  }
+  if (register.value || recover.value || method.value === 'password') {
+    form.password = password.value
+    if (!form.password) { error.value = '请输入密码。'; return }
+  }
+  if (register.value) {
+    form.nickname = nickname.value.trim()
+    if (!form.nickname || Array.from(form.nickname).length > 20) { error.value = '请输入 1–20 个字符的昵称。'; return }
+    if (!agree.value) { error.value = '请先勾选注册确认。'; return }
+  }
+  if (props.kind === 'login') form.method = method.value
+  busy.value = true
+  try {
+    if (recover.value) await auth.recover(form)
+    else await accountData.authenticate(props.kind, form)
+    if (!active) return
+    completed.value = true
+    password.value = ''
+    code.value = ''
+    hint(recover.value ? '密码已重置' : register.value ? '账号已创建' : '已登录')
+    emit('leave', recover.value ? 'login' : 'home')
+  } catch (cause) {
+    if (active) error.value = cause.message || '操作失败，请重试'
+  } finally {
+    busy.value = false
+  }
+}
+watch(account, () => {
+  codeHint.value = ''
+  code.value = ''
+  seconds.value = 0
+  clearInterval(timer)
+})
+onUnmounted(() => { active = false; clearInterval(timer) })
 </script>
 <template>
 <view class="surface auth" :class="state.theme">
- <view class="auth-top"><button class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">Nova Pocket</text></view>
+ <view class="auth-top"><button class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
  <view class="auth-content">
-  <view class="auth-mark"><NovaIcon name="sparkles" :tone="state.theme==='dark'?'muted':'white'" :size="26" /></view>
+  <view class="auth-mark"><image v-if="config.brand.logo" class="auth-logo" mode="aspectFit" :src="config.brand.logo" /><NovaIcon v-else name="sparkles" :tone="state.theme==='dark'?'muted':'white'" :size="26" /></view>
   <text class="title">{{title}}</text>
-  <text class="note auth-intro">仅使用演示数据，不发送真实邮件或保存密码。</text>
+  <text v-if="auth.demo" class="note auth-intro">仅使用演示数据，不发送真实邮件或保存密码。</text>
   <view v-if="kind==='login'" class="methods" aria-label="登录方式">
    <text class="mode-label">{{method==='password'?'密码登录':'邮箱验证码登录'}}</text>
    <button class="link" @tap="setMethod(method==='password'?'code':'password')">{{method==='password'?'改用邮箱验证码':'改用密码登录'}}</button>
   </view>
   <form @submit="submit">
    <view class="fields">
-    <view v-if="register" class="field"><text>昵称</text><input v-model="nickname" aria-label="昵称" placeholder="虚构昵称" maxlength="40" /></view>
-    <view class="field"><text>演示邮箱</text><input v-model="account" aria-label="演示邮箱" placeholder="demo@example.test" maxlength="70" /></view>
-    <view v-if="usesCode" class="field"><text>演示验证码</text><view class="input-row code-row"><input v-model="code" aria-label="演示验证码" type="number" maxlength="6" placeholder="6 位数字"/><button class="btn" :disabled="seconds>0" @tap="sendCode">{{seconds>0?seconds+' 秒':'生成验证码'}}</button></view><text v-if="dispatched" class="note hint-code" role="status">演示验证码：246810（未发送邮件）</text></view>
-    <view v-if="register||recover||method==='password'" class="field"><text>{{recover?'新密码':'演示密码'}}</text><view class="input-row password-row"><input v-model="password" :password="!visible" aria-label="演示密码" placeholder="输入至少 8 个字符" maxlength="100" /><button class="btn password-toggle" :aria-label="visible?'隐藏密码':'显示密码'" @tap="visible=!visible"><NovaIcon :name="visible?'eye-off':'eye'" :tone="tone" /></button></view></view>
-    <checkbox-group v-if="register" @change="selectTerms"><label class="consent"><checkbox value="yes" :checked="agree" :color="themeColor" /><text>同意仅使用虚构资料体验，不创建真实账号</text></label></checkbox-group>
+    <view v-if="register" class="field"><text>昵称</text><input v-model="nickname" aria-label="昵称" placeholder="昵称" maxlength="40" /></view>
+    <view class="field"><text>邮箱</text><input v-model="account" aria-label="邮箱" :placeholder="auth.demo ? 'demo@example.test' : '请输入邮箱'" maxlength="70" /></view>
+    <view v-if="usesCode" class="field"><text>验证码</text><view class="input-row code-row"><input v-model="code" aria-label="验证码" type="number" maxlength="16" placeholder="请输入验证码"/><button class="btn" :disabled="seconds>0 || sending" @tap="sendCode">{{seconds>0?seconds+' 秒':(auth.demo?'生成验证码':'发送验证码')}}</button></view><text v-if="codeHint" class="note hint-code" role="status">{{codeHint}}</text></view>
+    <view v-if="register||recover||method==='password'" class="field"><text>{{recover?'新密码':'密码'}}</text><view class="input-row password-row"><input v-model="password" :password="!visible" aria-label="密码" placeholder="请输入密码" maxlength="100" /><button class="btn password-toggle" :aria-label="visible?'隐藏密码':'显示密码'" @tap="visible=!visible"><NovaIcon :name="visible?'eye-off':'eye'" :tone="tone" /></button></view></view>
+    <checkbox-group v-if="register" @change="selectTerms"><label class="consent"><checkbox value="yes" :checked="agree" :color="themeColor" /><text>{{auth.demo?'同意仅使用虚构资料体验，不创建真实账号':'确认使用上述资料注册账号'}}</text></label></checkbox-group>
     <text v-if="error" class="error" role="alert">{{error}}</text>
     <button class="btn primary" form-type="submit" :disabled="busy">{{busy?'处理中…':actionLabel}}</button>
    </view>
   </form>
   <view class="form-links">
-   <button class="link" @tap="mockFields">填入演示资料</button>
+   <button v-if="auth.demo" class="link" @tap="mockFields">填入演示资料</button>
    <button v-if="kind==='login'" class="link" @tap="openAuth('register')">注册</button>
    <button v-if="kind==='login'" class="link" @tap="openAuth('recover')">忘记密码</button>
    <button v-if="kind!=='login'" class="link" @tap="$emit('leave', 'login')">返回登录</button>
@@ -86,6 +130,7 @@ onUnmounted(()=>{clearInterval(timer);clearTimeout(submitTimer);password.value='
 </view>
 </template>
 <style scoped>
+.auth-logo{width:32px;height:32px}
 .auth{min-height:100vh;min-height:100dvh;padding:0 20px max(20px,env(safe-area-inset-bottom))}
 .auth-top{width:100%;max-width:440px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 0 10px}.brand-name{font-size:15px;font-weight:780}
 .auth-content{width:100%;max-width:440px;margin:22px auto 0}.auth-mark{display:flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:15px;background:var(--brand);margin:0 0 13px}.auth-intro{margin:6px 0 18px}

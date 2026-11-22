@@ -1,4 +1,7 @@
-<script>export default {}</script>
+<script>
+import { account } from './state.js'
+export default { onLaunch() { account.restoreSession() } }
+</script>
 <style>
 page,body{margin:0;background:#f4f6fa;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;color:#23283a}
 /* Scope the reset above UniApp's element defaults, including lazy-loaded H5 styles. */
@@ -20,4 +23,6 @@ page,body{margin:0;background:#f4f6fa;font-family:Inter,system-ui,-apple-system,
 .note{display:block;overflow-wrap:anywhere;font-size:14px;line-height:1.55;color:var(--muted)}
 .surface .panel{min-width:0;width:100%;border:1px solid var(--line);border-radius:16px;background:var(--card);padding:15px}
 .badge{display:inline-flex;border-radius:7px;background:var(--soft);color:var(--brand);padding:3px 7px;font-size:12px;font-weight:750}
+.np-stack{display:flex;flex-direction:column;gap:11px}
+.np-grow{min-width:0;flex:1}
 </style>

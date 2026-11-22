@@ -3,13 +3,14 @@ import { computed, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import AccountScreen from '../../components/AccountScreen.vue'
 import { backFromAccountView, detailTab, showAccountTab } from '../../account-navigation.js'
-import { authRoute, hint, state } from '../../state.js'
+import { account, authRoute, hint, state } from '../../state.js'
 import { useLeaveConfirmation } from '../../use-leave-confirmation.js'
 
 const tab = ref('home')
 const initial = ref('')
 const draft = ref('')
 const error = ref('')
+const saving = ref(false)
 const guest = computed(() => state.mode === 'guest')
 
 function loadDraft() {
@@ -40,20 +41,27 @@ function selectTab(value) {
   return leave(() => showAccountTab(value))
 }
 
-function save() {
+async function save() {
+  if (saving.value) return
   const name = draft.value.trim()
   const size = Array.from(name).length
   if (!size || size > 20) {
-    error.value = '请输入 1–20 个字符的虚构昵称。'
+    error.value = '请输入 1–20 个字符的昵称。'
     return
   }
 
-  state.nickname = name
-  state.mode = 'member'
-  initial.value = name
-  draft.value = name
-  hint('示例资料已保存')
-  return back()
+  saving.value = true
+  try {
+    await account.updateProfile({ nickname: name })
+    initial.value = state.nickname
+    draft.value = initial.value
+    hint('资料已保存')
+    return back()
+  } catch (cause) {
+    error.value = cause.message || '保存失败，请重试'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -61,16 +69,16 @@ function save() {
   <AccountScreen route="profile" :tab="tab" @back="back" @select-tab="selectTab">
     <template #profile>
       <view v-if="guest" class="panel">
-        <text class="profile-title">请先登录演示账号</text>
+        <text class="profile-title">请先登录账号</text>
         <button class="btn profile-action" @tap="authRoute('login')">去登录</button>
       </view>
       <view v-else class="panel profile">
         <text class="profile-title">展示昵称</text>
-        <input v-model="draft" aria-label="展示昵称" maxlength="64" placeholder="虚构昵称" @input="error=''" />
+        <input v-model="draft" aria-label="展示昵称" maxlength="64" placeholder="昵称" @input="error=''" />
         <text v-if="error" class="error" role="alert">{{ error }}</text>
         <text class="note">请输入 1–20 个字符。不必填写真实资料。</text>
         <view class="profile-actions">
-          <button class="btn primary" @tap="save">保存资料</button>
+          <button class="btn primary" :disabled="saving" @tap="save">保存资料</button>
           <button class="btn" @tap="back">取消</button>
         </view>
       </view>

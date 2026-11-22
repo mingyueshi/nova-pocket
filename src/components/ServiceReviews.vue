@@ -11,6 +11,7 @@ const saved = computed(() => order.value ? serviceDemo.reviews[order.value.id] :
 const orders = computed(() => serviceOrders.filter(item => item.status === 'complete' &&
   (serviceDemo.reviewFilter === 'all' || (serviceDemo.reviewFilter === 'submitted') === Boolean(serviceDemo.reviews[item.id]))))
 const stars = [1, 2, 3, 4, 5]
+const commentLimit = 140
 const rating = ref(0), content = ref(''), problem = ref(''), submitted = ref(false)
 const count = computed(() => Array.from(content.value).length)
 watch(() => [props.view, props.id, serviceDemo.reviews], () => {
@@ -26,8 +27,8 @@ function choose(value) {
 function submit() {
   if (!order.value || order.value.status !== 'complete' || saved.value) return
   if (!rating.value) { problem.value = '请先选择评分。'; return }
+  if (count.value > commentLimit) { problem.value = '评价不超过 140 个字符。'; return }
   const message = content.value.trim()
-  if (Array.from(message).length > 140) { problem.value = '评价不超过 140 个字符。'; return }
   serviceDemo.reviews[order.value.id] = { rating: rating.value, content: message, date: '刚刚' }
   content.value = ''
   rating.value = 0
@@ -83,8 +84,8 @@ function open(view, id) {
       </view>
       <text class="note" role="status">{{ rating ? '已选 ' + rating + ' / 5 星' : '请选择 1–5 星。' }}</text>
       <text class="review-field-label">评价内容（选填）</text>
-      <textarea v-model="content" class="review-field" :maxlength="140" placeholder="写下示例体验，不要填写真实个人信息" aria-label="评价内容" />
-      <text class="note review-counter">{{ count }} / 140</text>
+      <textarea v-model="content" class="review-field" @input="problem=''" :maxlength="-1" placeholder="写下示例体验，不要填写真实个人信息" aria-label="评价内容" />
+      <text class="note review-counter" :class="{ 'review-problem': count > commentLimit }">{{ count }} / {{ commentLimit }}</text>
       <text v-if="problem" class="review-problem" role="alert">{{ problem }}</text>
       <button class="btn primary" @click="submit">提交示例评价</button>
       <text class="note">模拟提交，不会公开。刷新页面后恢复示例。</text>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import NovaIcon from './NovaIcon.vue'
+import { summarizeValues, trendLabels } from '../service-stats.js'
 import { state } from '../state.js'
 const spans=[['week','最近 7 天'],['month','最近 30 天']]
 const data=[
@@ -8,24 +9,38 @@ const data=[
  {title:'完成事项',unit:'项',short:[2,4,2,6,3,5,4],prior:[1,2,0,2,1,2,1,2,2,0,3,1,2,1,0,2,3,3,2,3,1,2,3],summary:'标记完成的待办与服务事项'},
  {title:'收到通知',unit:'条',short:[1,3,0,2,4,1,2],prior:[0,0,1,1,0,2,1,1,0,1,2,1,0,1,0,2,0,1,1,0,1,2,1],summary:'账户、服务和安全类通知'}
 ]
-const shortLabels=['11/16','11/17','11/18','11/19','11/20','11/21','11/22']
-const longLabels=['10/24–10/29','10/30–11/04','11/05–11/10','11/11–11/16','11/17–11/22']
-const span=ref(0), metric=ref(0), selected=ref(null)
-const curr=computed(()=>data[metric.value]), values=computed(()=>{if(!span.value)return curr.value.short;const days=[...curr.value.prior,...curr.value.short];return longLabels.map((_,i)=>days.slice(i*6,(i+1)*6).reduce((a,b)=>a+b,0))})
-const labels=computed(()=>span.value?longLabels:shortLabels)
-const total=computed(()=>values.value.reduce((a,b)=>a+b,0))
-const max=computed(()=>Math.max(...values.value,1))
-const peak=computed(()=>values.value.indexOf(max.value))
-const detail=computed(()=>selected.value===null?null:{label:labels.value[selected.value],val:values.value[selected.value]})
-const tone=computed(()=>state.theme==='dark'?'light':'blue')
-function setSpan(e){span.value=Number(e.detail.value);selected.value=null}
-function setMetric(e){metric.value=Number(e.detail.value);selected.value=null}
+const { week, month } = trendLabels()
+const span = ref(0)
+const metric = ref(0)
+const selected = ref(null)
+const curr = computed(() => data[metric.value])
+const values = computed(() => {
+  if (!span.value) return curr.value.short
+  const days = [...curr.value.prior, ...curr.value.short]
+  return month.map((_, index) => days.slice(index * 6, (index + 1) * 6).reduce((sum, day) => sum + day, 0))
+})
+const labels = computed(() => span.value ? month : week)
+const summary = computed(() => summarizeValues(values.value))
+const detail = computed(() => selected.value === null
+  ? null
+  : { label: labels.value[selected.value], val: values.value[selected.value] })
+const tone = computed(() => state.theme === 'dark' ? 'light' : 'blue')
+
+function setSpan(event) {
+  span.value = Number(event.detail.value)
+  selected.value = null
+}
+
+function setMetric(event) {
+  metric.value = Number(event.detail.value)
+  selected.value = null
+}
 </script>
 <template>
 <view class="stats">
  <view class="panel summary">
   <view class="stat-icon"><NovaIcon name="chart-no-axes-combined" :tone="tone" :size="23" /></view>
-  <text class="metric">{{curr.title}}</text><text class="number">{{total}}<text class="unit">{{curr.unit}}</text></text><text class="note">{{spans[span][1]}} · {{curr.summary}}</text>
+  <text class="metric">{{curr.title}}</text><text class="number">{{summary.total}}<text class="unit">{{curr.unit}}</text></text><text class="note">{{spans[span][1]}} · {{curr.summary}}</text>
  </view>
  <view class="picker-list">
   <picker :range="spans.map(x=>x[1])" :value="span" @change="setSpan"><view class="pick"><text>统计区间</text><text>{{spans[span][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
@@ -33,14 +48,15 @@ function setMetric(e){metric.value=Number(e.detail.value);selected.value=null}
  </view>
  <view class="panel chart"><text class="metric">{{span?'按时间分段':'每日趋势'}}</text><text class="note chart-note">点任一条查看该时间段，图内以本区间最高值为比例。</text>
   <button v-for="(val,i) in values" :key="labels[i]" class="bar-row" role="button" tabindex="0" :aria-pressed="selected===i" :class="{selected:selected===i}" @tap="selected=i" @keydown.enter.prevent="selected=i" @keydown.space.prevent="selected=i">
-   <text class="bar-label">{{labels[i]}}</text><view class="bar-track" aria-hidden="true"><view class="bar-fill" :style="{width:(val/max*100)+'%'}"></view></view><text class="bar-value">{{val}}</text>
+   <text class="bar-label">{{labels[i]}}</text><view class="bar-track" aria-hidden="true"><view class="bar-fill" :style="{width:(val/summary.scale*100)+'%'}"></view></view><text class="bar-value">{{val}}</text>
   </button>
   <view class="chart-detail" role="status">
    <text v-if="detail">{{detail.label}} · {{detail.val}} {{curr.unit}}</text>
-   <text v-else>最高：{{labels[peak]}} · {{max}} {{curr.unit}}</text>
+   <text v-else-if="summary.peak>=0">最高：{{labels[summary.peak]}} · {{summary.maximum}} {{curr.unit}}</text>
+   <text v-else>当前区间暂无数据。</text>
   </view>
  </view>
- <text class="note source-note">固定日期的示例数据，不读取真实访问记录。</text>
+ <text class="note source-note">日期随当天滚动，数据为示例。</text>
 </view>
 </template>
 <style scoped>

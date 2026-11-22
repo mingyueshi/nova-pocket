@@ -3,6 +3,7 @@ import { onLoad } from '@dcloudio/uni-app'
 // #ifdef H5
 import { getCurrentInstance, watch } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
+import { decodePageOption } from './account-navigation.js'
 // #endif
 import { accountTarget, detailUrl, openAccountView, pageRecordId, serviceViewForPath, viewNames } from './account-navigation.js'
 
@@ -24,7 +25,10 @@ export function useServicePage() {
   onShow(() => { visible = true })
   onHide(() => { visible = false })
   watch(() => vm.$route.fullPath, () => {
-    if (visible && vm.$route.path === '/' + path) load(vm.$route.query)
+    if (visible && vm.$route.path === '/' + path) {
+      const query = vm.$route.query
+      load({ ...query, id: decodePageOption(query.id) })
+    }
   }, { flush: 'post' })
   // #endif
 

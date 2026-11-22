@@ -12,7 +12,7 @@ npm ci
 npm run dev:h5
 ```
 
-第一次接入自己的产品，可以先运行「青禾书房」示例。它换了品牌、调整了底栏顺序、关闭了订单和评价，并通过本地 HTTP 服务完成登录、读取消息和写回已读状态。[运行与接入步骤](examples/reading-room/README.md)
+第一次接入自己的产品，可以先运行「青禾书房」示例。它换了品牌、调整了底栏顺序、关闭了订单和评价，并通过本地 HTTP 服务登录、同步消息和查询当前读者的借阅记录。[运行与接入步骤](examples/reading-room/README.md)
 
 ## 构建
 
@@ -40,7 +40,7 @@ H5 产物在 `dist/build/h5`。微信小程序产物在 `dist/build/mp-weixin`�
 
 ### 添加自己的服务页面
 
-青禾书房的「我的借阅」由一项入口配置和一个 Vue 页面组成。下游可按相同方式添加预约、课程等服务。[入口配置](examples/reading-room/src/pocket.config.js) · [完整借阅页面](examples/reading-room/src/pocket-services/loans/index.vue)
+青禾书房通过一项入口配置注册「我的借阅」页面。借阅接口和加载逻辑归示例项目维护，下游可按相同方式添加预约、课程等服务。[入口配置](examples/reading-room/src/pocket.config.js) · [完整借阅页面](examples/reading-room/src/pocket-services/loans/index.vue)
 
 1. 在 `src/pocket.config.js` 的 `modules` 中添加服务。键用作长期分享标识，`page` 指向 `src/pocket-services/` 下的相对路径，省略 `.vue` 后缀。
 

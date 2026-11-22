@@ -84,12 +84,18 @@ export function createAccountData(auth, messages, withMessages = true) {
       if (version !== session.version) throw new Error('账户状态已变更')
       session.user = user
     } catch (error) {
-      if (version === session.version && isSessionExpired(error)) setSession(null, true)
+      handleSessionError(error, version)
       throw error
     }
   }
 
+  function handleSessionError(error, version) {
+    if (version !== session.version || !isSessionExpired(error)) return false
+    setSession(null, true)
+    return true
+  }
+
   const { inbox, loadMessages, getMessage, markRead, markAllRead } = mailbox
-  return { session, inbox, restoreSession, authenticate, logout, updateProfile, loadMessages,
+  return { session, inbox, restoreSession, authenticate, logout, updateProfile, handleSessionError, loadMessages,
     getMessage, markRead, markAllRead, useDemoSession: setSession }
 }

@@ -14,6 +14,9 @@ const detail = ref({ route: '', recordId: '', tab: 'home' })
 const title = computed(() => viewNames[detail.value.route] || '页面未找到')
 const destination = computed(() => serviceUrl(detail.value.route, detail.value.recordId, detail.value.tab))
 let ready = false
+// #ifdef H5
+const instance = getCurrentInstance().proxy
+// #endif
 
 function forward() {
   uni.redirectTo({
@@ -27,6 +30,10 @@ function forward() {
 
 function loadDetail(query) {
   const route = typeof query?.view === 'string' && isDetail(query.view) ? query.view : ''
+  // #ifdef H5
+  // A public service URL is encoded once. Vue Router has already decoded it.
+  if (serviceUrl(route)) query = instance.$route.query
+  // #endif
   const recordId = pageRecordId(query?.id)
   detail.value = { route, recordId, tab: detailTab(route, query?.tab) }
   if (!destination.value) uni.setNavigationBarTitle({ title: title.value })
@@ -46,7 +53,6 @@ onUnload(() => { visible.value = false })
 
 // #ifdef H5
 // A pasted hash URL can change the query without creating another UniApp page instance.
-const instance = getCurrentInstance().proxy
 watch(() => instance.$route.fullPath, () => {
   if (!visible.value || instance.$route.path !== detailPath) return
   loadDetail(instance.$route.query)

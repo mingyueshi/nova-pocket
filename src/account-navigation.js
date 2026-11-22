@@ -85,12 +85,16 @@ export function accountTarget(view, id, tab) {
   return { view, id: typeof id === 'string' ? id : '', tab: isTab(view) ? view : detailTab(view, tab) }
 }
 
-export function pageRecordId(value, platform = process.env.UNI_PLATFORM) {
+export function decodePageOption(value) {
   if (typeof value !== 'string') return ''
-  // H5's router decodes the query. WeChat passes its page options through to onLoad.
-  if (platform !== 'mp-weixin') return value
   try { return decodeURIComponent(value) }
   catch { return value }
+}
+
+export function pageRecordId(value, platform = process.env.UNI_PLATFORM) {
+  // H5's onLoad already decodes page options. WeChat passes them through.
+  if (platform === 'mp-weixin') return decodePageOption(value)
+  return typeof value === 'string' ? value : ''
 }
 
 export function targetUrl(target) {

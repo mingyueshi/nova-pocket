@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
-import { createDemoAdapters } from '../../src/adapters/demo.js'
+import { createDemoAdapters } from '#pocket/demo-adapters'
+import config from './src/pocket.config.js'
 
 const notices = [
-  { id: 'welcome', title: '读者卡已开通', date: '今天', body: '欢迎来到青禾书房。' },
+  { id: 'welcome', title: '读者卡已开通', date: '今天', body: '欢迎来到' + config.brand.name + '。' },
   { id: 'hours', title: '周末开放时间', date: '昨天', body: '周末开馆时间为上午九点至下午五点。' },
   { id: '借阅/提醒', title: '借阅到期提醒', date: '上周', body: '你借阅的《山川笔记》即将到期。' },
 ]
@@ -142,5 +143,5 @@ export function createReadingRoomServer() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  createReadingRoomServer().listen(4318, '127.0.0.1', () => console.log('青禾书房 API  http://127.0.0.1:4318/api'))
+  createReadingRoomServer().listen(4318, '127.0.0.1', () => console.log(config.brand.name + ' API  http://127.0.0.1:4318/api'))
 }

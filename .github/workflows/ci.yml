@@ -24,14 +24,52 @@ jobs:
       - run: npm run icons:check
       - run: npm run build:h5
       - run: npm run build:mp-weixin
-      - run: npm run example:prepare
-      - run: npm --prefix .build/reading-room run build:h5
-      - run: npx playwright-core install --with-deps --only-shell chromium
-      - run: npm run example:check:h5
-      - run: npm --prefix .build/reading-room run build:mp-weixin
-      - name: Check optional modules in the WeChat example
-        working-directory: .build/reading-room/dist/build/mp-weixin
+  standalone:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Create the reading room outside the checkout
+        run: npm run create -- "$RUNNER_TEMP/reading-room"
+      - name: Install and customize the generated project
+        working-directory: ${{ runner.temp }}/reading-room
         run: |
+          npm ci
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import { writeFileSync } from 'node:fs'
+          import config from './src/pocket.config.js'
+          assert.equal(config.brand.name, '青禾书房')
+          config.brand.name = '溪桥阅览室'
+          writeFileSync('src/pocket.config.js', 'export default ' + JSON.stringify(config, null, 2) + '\n')
+          JS
+          npm run lint
+          npm run icons:check
+      - name: Build H5 and verify both readers using the same shared link
+        working-directory: ${{ runner.temp }}/reading-room
+        run: |
+          npm run build:h5
+          npx --no-install playwright-core install --with-deps --only-shell chromium
+          npm run check:h5
+      - name: Build WeChat and verify the brand and optional modules
+        working-directory: ${{ runner.temp }}/reading-room
+        run: |
+          npm run build:mp-weixin
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const read = path => readFileSync('dist/build/' + path, 'utf8')
+          assert.ok(read('h5/index.html').includes('<title>溪桥阅览室 · 读者中心</title>'))
+          assert.equal(JSON.parse(read('mp-weixin/pages/index/index.json')).navigationBarTitleText, '溪桥阅览室')
+          const { subPackages } = JSON.parse(read('mp-weixin/app.json'))
+          assert.ok(subPackages.some(group => group.root === 'pocket-services' && group.pages.includes('loans/index')))
+          JS
+          cd dist/build/mp-weixin
           test -s components/ServiceStats.wxml
           test -s pocket-services/loans/index.wxml
           test ! -e components/ServiceOrders.wxml

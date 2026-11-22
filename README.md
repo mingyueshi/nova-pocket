@@ -12,7 +12,15 @@ npm ci
 npm run dev:h5
 ```
 
-第一次接入自己的产品，可以先运行「青禾书房」示例。它换了品牌、调整了底栏顺序、关闭了订单和评价，并通过本地 HTTP 服务登录、同步消息和查询当前读者的借阅记录。[运行与接入步骤](examples/reading-room/README.md)
+要以「青禾书房」为起点，从本仓库运行以下命令，生成带有源码、依赖锁文件、示例 API、许可证和 README 的独立项目。
+
+```sh
+npm run create -- ../my-reading-room
+cd ../my-reading-room
+npm ci
+```
+
+创建命令接受新目录或空目录，遇到已有文件、非空目录或作为目标的符号链接会退出。生成后的启动、换品牌、双读者验收和构建步骤见新项目的 README。[仓库内示例与接入说明](examples/reading-room/README.md)
 
 ## 构建
 
@@ -121,7 +129,7 @@ npm run icons:check
 
 图标名单在 `src/icons.js`。更新 Lucide 或调整图标名单后，运行 `npm run icons:sync` 生成色调变体，并提交对应资源。
 
-CI 另会构建青禾书房的 H5 和微信小程序产物，在 Chromium 中运行关键页面验收，并检查微信构建是否正确裁剪关闭的模块。[本地复现方法](examples/reading-room/README.md#双端验收)
+CI 还会在仓库外生成独立项目，执行 `npm ci`，更换品牌，使用 Chromium 验证两位读者打开同一条借阅分享链接，并检查微信产物的品牌和模块裁剪。[本地复现方法](examples/reading-room/standalone.md#构建和验收)
 
 ## 项目结构
 

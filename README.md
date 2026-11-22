@@ -12,6 +12,8 @@ npm ci
 npm run dev:h5
 ```
 
+第一次接入自己的产品，可以先运行「青禾书房」示例。它换了品牌、调整了底栏顺序、关闭了订单和评价，并通过本地 HTTP 服务完成登录、读取消息和写回已读状态。[运行与接入步骤](examples/reading-room/README.md)
+
 ## 构建
 
 ```bash
@@ -100,6 +102,8 @@ npm run icons:check
 
 图标名单在 `src/icons.js`。更新 Lucide 或调整图标名单后，运行 `npm run icons:sync` 生成色调变体，并提交对应资源。
 
+CI 另会构建青禾书房的 H5 和微信小程序产物，在 Chromium 中运行关键页面验收，并检查微信构建是否正确裁剪关闭的模块。[本地复现方法](examples/reading-room/README.md#双端验收)
+
 ## 项目结构
 
 - `src/pages/index/index.vue` 管理概览、服务、消息和我的四个底栏入口。`src/pages/account/` 注册详情与资料编辑页面。
@@ -108,4 +112,10 @@ npm run icons:check
 - `src/account-data.js` 管理会话，`src/inbox.js` 管理收件箱分页和已读同步。`src/adapters/demo.js` 与 `src/service-demo.js` 提供默认示例数据。
 - `src/static/icons/LICENSE.txt`：Lucide 图标许可。
 
-最初归档标注的上游源码基线为 `07ba6ab98d4e29cefbc96227ad0dc4951fef1a9b`。原 Git 历史未随归档导入，提交哈希需在上游仓库核对。
+## 许可与来源
+
+项目源码按 MIT 许可证提供，版权署名为 `mingyueshi`。复制或分发本项目时请保留版权与许可声明。[项目许可证](LICENSE)
+
+图标来自 Lucide，分发时请一并保留图标许可文件，其中包含 Lucide 的 ISC 许可和源自 Feather 的图标所适用的 MIT 声明。[图标许可证](src/static/icons/LICENSE.txt)
+
+最初导入的 `Nova-Pocket-v7-source.zip` 标注基线为 `07ba6ab98d4e29cefbc96227ad0dc4951fef1a9b`。归档未附原始 Git 历史。对照本仓库的导入提交 `b225183`，归档内 107 个文件中有一处差异，为 `.gitignore` 的忽略规则。

@@ -1,11 +1,13 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
 import NovaIcon from './NovaIcon.vue'
+import { useHeaderPadding } from '../use-header-padding.js'
 import config from '../pocket.config.js'
 import { auth } from '../adapters/index.js'
 import { account as accountData, hint, state, themeColor } from '../state.js'
 const emit = defineEmits(['dirty', 'leave', 'open'])
 const props=defineProps({kind:{type:String,required:true}})
+const headerPadding = useHeaderPadding()
 const method=ref('password'), account=ref(''), code=ref(''), password=ref(''), nickname=ref(''), agree=ref(false), visible=ref(false), codeHint=ref(''), sending=ref(false), seconds=ref(0), error=ref(''), busy=ref(false)
 const completed = ref(false)
 let timer
@@ -100,7 +102,7 @@ onUnmounted(() => { active = false; clearInterval(timer) })
 </script>
 <template>
 <view class="surface auth" :class="state.theme">
- <view class="auth-top"><button class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
+ <view class="auth-top" :style="headerPadding"><button class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
  <view class="auth-content">
   <view class="auth-mark"><image v-if="config.brand.logo" class="auth-logo" mode="aspectFit" :src="config.brand.logo" /><NovaIcon v-else name="sparkles" :tone="state.theme==='dark'?'muted':'white'" :size="26" /></view>
   <text class="title">{{title}}</text>

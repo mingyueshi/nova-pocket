@@ -13,6 +13,7 @@ import ServiceReviews from './ServiceReviews.vue'
 // #endif
 import MessagePanel from './MessagePanel.vue'
 import StatePanel from './StatePanel.vue'
+import { useHeaderPadding } from '../use-header-padding.js'
 import config from '../pocket.config.js'
 import { auth, demoSettingsEnabled } from '../adapters/index.js'
 import { accountTarget, requiresLogin, isTab, openAccountView, returnToAccountHome, services, shortcuts, tabs, viewNames } from '../account-navigation.js'
@@ -23,6 +24,7 @@ import { account, authRoute, confirm, hint, layouts, modes, reset, scenarios, st
 
 const props = defineProps({ route: String, recordId: String, tab: String, active: Boolean })
 const emit = defineEmits(['back', 'select-tab'])
+const headerPadding = useHeaderPadding()
 const serviceLabels = services.map(([, label]) => label).join('、')
 const navigationLabels = tabs.map(([, label]) => label).join('、')
 const presets = [['layout', '首页布局', layouts], ['mode', '账户状态', modes], ['theme', '界面主题', themes], ['scenario', '消息状态', scenarios]]
@@ -106,7 +108,7 @@ function explain(title, content) {
 <template>
 <view class="surface account-app" :class="state.theme">
  <scroll-view scroll-y class="screen" :scroll-top="scrollTo" @scroll="storeScroll">
-  <view class="shell">
+  <view class="shell" :style="headerPadding">
    <view class="app-head" :class="{'sub-head':isDetail}">
     <button v-if="isDetail" class="icon-button" aria-label="返回上一页" @tap="$emit('back')"><NovaIcon name="chevron-left" :tone="tone" /></button>
     <view class="heading"><text class="title" role="heading" aria-level="1">{{viewNames[route] || '页面未找到'}}</text><text v-if="!isDetail" class="note">{{config.brand.name}}</text></view>

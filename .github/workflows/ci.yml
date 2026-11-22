@@ -24,3 +24,14 @@ jobs:
       - run: npm run icons:check
       - run: npm run build:h5
       - run: npm run build:mp-weixin
+      - run: npm run example:prepare
+      - run: npm --prefix .build/reading-room run build:h5
+      - run: npx playwright-core install --with-deps --only-shell chromium
+      - run: npm run example:check:h5
+      - run: npm --prefix .build/reading-room run build:mp-weixin
+      - name: Check optional modules in the WeChat example
+        working-directory: .build/reading-room/dist/build/mp-weixin
+        run: |
+          test -s components/ServiceStats.wxml
+          test ! -e components/ServiceOrders.wxml
+          test ! -e components/ServiceReviews.wxml

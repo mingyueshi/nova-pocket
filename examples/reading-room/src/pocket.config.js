@@ -14,6 +14,7 @@ export default {
     ['profile', '读者资料', 'user-round', '编辑展示昵称'],
   ],
   modules: {
+    loans: { enabled: true, label: '我的借阅', icon: 'layers', description: '查看在借与已归还的图书', requiresLogin: true, page: 'loans/index' },
     orders: { enabled: false },
     reviews: { enabled: false },
     stats: { enabled: true, label: '使用统计', icon: 'chart-no-axes-combined', description: '查看使用趋势' },

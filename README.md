@@ -38,6 +38,25 @@ H5 产物在 `dist/build/h5`。微信小程序产物在 `dist/build/mp-weixin`�
 
 例如，将 `modules.reviews.enabled` 改为 `false`，订单详情中的评价按钮会一同隐藏，已有评价链接会显示返回账户中心的入口。关闭全部服务会移除服务底栏。三个模块的界面分别参与条件编译，订单与评价共用示例订单数据。构建命令也会把品牌标题同步到 UniApp 的 `manifest.json` 和 `pages.json`，其他平台参数仍在这两个文件中配置。
 
+### 添加自己的服务页面
+
+青禾书房的「我的借阅」由一项入口配置和一个 Vue 页面组成。下游可按相同方式添加预约、课程等服务。[入口配置](examples/reading-room/src/pocket.config.js) · [完整借阅页面](examples/reading-room/src/pocket-services/loans/index.vue)
+
+1. 在 `src/pocket.config.js` 的 `modules` 中添加服务。键用作长期分享标识，`page` 指向 `src/pocket-services/` 下的相对路径，省略 `.vue` 后缀。
+
+   ```js
+   loans: {
+     enabled: true, label: '我的借阅', icon: 'layers', description: '查看在借与已归还的图书',
+     requiresLogin: true, page: 'loans/index',
+   }
+   ```
+
+2. 新建 `src/pocket-services/loans/index.vue`。在页面的 `<script setup>` 中调用 `useServicePage()`，将返回的 `target` 传给 `<ServicePage :target="target">`，在其默认插槽里放业务内容。`target.id` 为空时显示列表，点击一条记录时调用 `openRecord(id)`，ID 使用非空字符串。详情可通过 `:shareable="!!record"` 开启分享按钮。微信页面还需在页面本身调用 `onShareAppMessage(shareMessage)`，具体写法见完整借阅页面。
+
+重新启动开发服务或构建后，框架会在 `pages.json` 的 `pocket-services` 分包中注册启用的页面。该分包由配置生成，其他分包可照常维护。每个服务使用独立的页面路径，服务键请避开内置视图名。
+
+H5 的「复制详情链接」与微信分享使用相同的站内路径，例如 `/pages/account/detail?view=loans&id=BR-1038`。模板根据服务键查找当前页面，所以移动页面文件后旧分享仍然有效。访客登录后会返回原记录。关闭模块或移除服务底栏后，原分享会显示「页面不可用」。`requiresLogin` 管理前端展示，接入个人业务数据时，后端还需按当前用户校验记录归属。
+
 ## 接入自己的登录与消息
 
 `src/adapters/index.js` 导出 `auth` 和 `messages`。可以分别替换，页面只调用这两个接口。内置的 `createHttpAdapters` 可对接已有请求客户端。以下写法放在适配器入口，保留文件中现有的 `config` 导入和 `demoSettingsEnabled` 导出。

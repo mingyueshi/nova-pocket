@@ -33,5 +33,6 @@ jobs:
         working-directory: .build/reading-room/dist/build/mp-weixin
         run: |
           test -s components/ServiceStats.wxml
+          test -s pocket-services/loans/index.wxml
           test ! -e components/ServiceOrders.wxml
           test ! -e components/ServiceReviews.wxml

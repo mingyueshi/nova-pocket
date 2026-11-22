@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import config from './pocket.config.js'
 import { demoSettingsEnabled } from './adapters/index.js'
+import { configuredServicePages, serviceRoot } from './service-pages.js'
 
 const tabKeys = ['home', 'services', 'messages', 'mine']
 const moduleOwners = { order: 'orders', review: 'reviews' }
@@ -10,6 +11,7 @@ const profilePath = '/pages/account/profile'
 export const detailPath = '/pages/account/detail'
 
 export function createNavigation(settings, showDemo) {
+  const servicePages = configuredServicePages(settings)
   const serviceTab = settings.tabs.some(([key]) => key === 'services')
   const services = Object.entries(settings.modules)
     .filter(([, module]) => serviceTab && module.enabled)
@@ -31,7 +33,7 @@ export function createNavigation(settings, showDemo) {
   if (showDemo) viewNames.demo = '演示设置'
 
   function isDetail(view) {
-    return Object.prototype.hasOwnProperty.call(viewNames, view) && !isTab(view) && view !== 'profile'
+    return typeof view === 'string' && Object.prototype.hasOwnProperty.call(viewNames, view) && !isTab(view) && view !== 'profile'
   }
 
   function requiresLogin(view) {
@@ -53,11 +55,23 @@ export function createNavigation(settings, showDemo) {
     return detailPath + '?' + query.join('&')
   }
 
+  function serviceUrl(view, id, tab) {
+    if (!servicePages.has(view)) return ''
+    const query = []
+    if (id) query.push('id=' + encodeURIComponent(id))
+    if (isTab(tab) && tab !== 'services') query.push('tab=' + encodeURIComponent(tab))
+    return '/' + serviceRoot + '/' + servicePages.get(view) + (query.length ? '?' + query.join('&') : '')
+  }
+
+  function serviceViewForPath(path) {
+    for (const [key, file] of servicePages) if (path === serviceRoot + '/' + file) return key
+  }
+
   const shortcuts = settings.shortcuts.filter(([key]) => isTab(key) || isDetail(key) || key === 'profile')
-  return { tabs, services, firstTab, viewNames, shortcuts, isTab, isDetail, requiresLogin, detailTab, detailUrl }
+  return { tabs, services, firstTab, viewNames, shortcuts, isTab, isDetail, requiresLogin, detailTab, detailUrl, serviceUrl, serviceViewForPath }
 }
 
-export const { tabs, services, firstTab, viewNames, shortcuts, isTab, isDetail, requiresLogin, detailTab, detailUrl } =
+export const { tabs, services, firstTab, viewNames, shortcuts, isTab, isDetail, requiresLogin, detailTab, detailUrl, serviceUrl, serviceViewForPath } =
   createNavigation(config, demoSettingsEnabled)
 export const rootTab = ref(firstTab)
 
@@ -82,7 +96,7 @@ export function pageRecordId(value, platform = process.env.UNI_PLATFORM) {
 export function targetUrl(target) {
   if (isTab(target.view)) return indexUrl(target.view)
   if (target.view === 'profile') return profilePath + '?tab=' + target.tab
-  return detailUrl(target.view, target.id, target.tab)
+  return serviceUrl(target.view, target.id, target.tab) || detailUrl(target.view, target.id, target.tab)
 }
 
 export function authUrl(kind, target) {
@@ -98,7 +112,7 @@ function previousAccountTarget(page) {
   if (page.route === indexPath) return accountTarget(rootTab.value)
   if ('/' + page.route === profilePath) return accountTarget('profile', '', query.tab)
   if ('/' + page.route === detailPath) return accountTarget(query.view, pageRecordId(query.id), query.tab)
-  return null
+  return accountTarget(serviceViewForPath(page.route), pageRecordId(query.id), query.tab)
 }
 
 export function leaveAuthPages(target = null) {
@@ -115,14 +129,22 @@ export function leaveAuthPages(target = null) {
   return uni.reLaunch({ url: target ? targetUrl(target) : indexUrl(firstTab) })
 }
 
+export function returnToServiceList(target) {
+  const pages = getCurrentPages()
+  const previous = pages[pages.length - 2]
+  const list = accountTarget(target.view, '', target.tab)
+  const origin = previous && previousAccountTarget(previous)
+  if (origin && targetUrl(origin) === targetUrl(list)) return uni.navigateBack()
+  return uni.redirectTo({ url: targetUrl(list) })
+}
+
 export function returnToAccountHome() {
   return uni.reLaunch({ url: indexUrl(firstTab) })
 }
 
 export function openAccountView(view, id, tab) {
   if (view !== 'profile' && !isDetail(view)) return showAccountTab(firstTab)
-  const url = view === 'profile' ? profilePath + '?tab=' + detailTab(view, tab) : detailUrl(view, id, tab)
-  return uni.navigateTo({ url })
+  return uni.navigateTo({ url: targetUrl(accountTarget(view, id, tab)) })
 }
 
 export function showAccountTab(tab) {

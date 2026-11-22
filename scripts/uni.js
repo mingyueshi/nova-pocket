@@ -1,7 +1,13 @@
 // Prepare the native UniApp metadata and conditional compilation before the CLI reads them.
-import { readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import config from '../src/pocket.config.js'
+import { configuredServicePages, serviceRoot, syncServicePackage } from '../src/service-pages.js'
 
+const servicePages = configuredServicePages(config)
+for (const path of servicePages.values()) {
+  const file = 'src/' + serviceRoot + '/' + path + '.vue'
+  if (!existsSync(file)) throw new Error('找不到自定义服务页面：' + file)
+}
 const { name, subtitle } = config.brand
 const title = [name, subtitle].filter(Boolean).join(' · ')
 function syncMetadata(path, update) {
@@ -19,6 +25,7 @@ syncMetadata('src/manifest.json', manifest => {
   manifest.h5.title = title
 })
 syncMetadata('src/pages.json', pages => {
+  syncServicePackage(pages, servicePages, config.modules)
   for (const page of pages.pages) {
     if (['pages/index/index', 'pages/account/detail'].includes(page.path)) page.style.navigationBarTitleText = name
   }

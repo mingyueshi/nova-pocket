@@ -27,7 +27,8 @@ jobs:
   pack:
     runs-on: ubuntu-latest
     outputs:
-      reference_checksums: ${{ steps.reference.outputs.checksums }}
+      basic: ${{ steps.reference.outputs.basic }}
+      reading-room: ${{ steps.reference.outputs.reading-room }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -39,21 +40,38 @@ jobs:
       - name: Record expected contents from the source template
         id: reference
         run: |
-          npm run create -- "$RUNNER_TEMP/reference"
-          cd "$RUNNER_TEMP/reference"
-          {
-            echo 'checksums<<END'
-            sha256sum package.json package-lock.json .gitignore server.js README.md LICENSE src/static/icons/LICENSE.txt
-            echo 'END'
-          } >> "$GITHUB_OUTPUT"
+          for template in basic reading-room; do
+            target="$RUNNER_TEMP/reference-$template"
+            npm run create -- "$target" --template "$template"
+            files=(package.json package-lock.json .gitignore README.md LICENSE src/static/icons/LICENSE.txt src/pocket.config.js check-h5.js)
+            if [[ "$template" == reading-room ]]; then files+=(server.js); fi
+            {
+              echo "$template<<END"
+              (cd "$target" && sha256sum "${files[@]}")
+              echo 'END'
+            } >> "$GITHUB_OUTPUT"
+          done
       - uses: actions/upload-artifact@v7
         with:
-          name: reading-room-creator
+          name: nova-pocket-creator
           path: dist/creator/*.tgz
           if-no-files-found: error
   standalone:
     needs: pack
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - template: basic
+            original: Nova Pocket
+            brand: 岚山账户中心
+          - template: reading-room
+            original: 青禾书房
+            brand: 溪桥阅览室
+    env:
+      TEMPLATE: ${{ matrix.template }}
+      ORIGINAL_NAME: ${{ matrix.original }}
+      BRAND: ${{ matrix.brand }}
     steps:
       - uses: actions/setup-node@v6
         with:
@@ -61,12 +79,13 @@ jobs:
           package-manager-cache: false
       - uses: actions/download-artifact@v8
         with:
-          name: reading-room-creator
+          name: nova-pocket-creator
           path: ${{ runner.temp }}/consumer
       - name: Create from the local tarball and protect downstream edits
         working-directory: ${{ runner.temp }}/consumer
         env:
-          REFERENCE_CHECKSUMS: ${{ needs.pack.outputs.reference_checksums }}
+          REFERENCE_CHECKSUMS: ${{ needs.pack.outputs[matrix.template] }}
+          npm_config_cache: ${{ runner.temp }}/creator-cache
         run: |
           packages=(./create-nova-pocket-*.tgz)
           test "${#packages[@]}" -eq 1
@@ -74,50 +93,66 @@ jobs:
           tar -xOzf "${packages[0]}" package/README.md > creator-readme
           grep -F 'npm exec --offline' creator-readme
           create=(npm exec --offline --yes --package="${packages[0]}" -- create-nova-pocket)
-          "${create[@]}" ./reading-room
-          (cd reading-room && printf '%s\n' "$REFERENCE_CHECKSUMS" | sha256sum -c -)
-          echo '下游书房说明' >> reading-room/README.md
-          cp reading-room/README.md expected-readme
-          if "${create[@]}" ./reading-room; then
+          "${create[@]}" ./project --template "$TEMPLATE"
+          (cd project && printf '%s\n' "$REFERENCE_CHECKSUMS" | sha256sum -c -)
+          if [[ "$TEMPLATE" == reading-room ]]; then
+            "${create[@]}" ./default-project
+            diff -qr project default-project
+          else
+            test ! -e project/server.js
+            test ! -e project/src/pocket-services/loans
+            if grep -rE '青禾书房|reader@example\.test|lin@example\.test' project; then exit 1; fi
+          fi
+          echo '下游项目说明' >> project/README.md
+          cp project/README.md expected-readme
+          if "${create[@]}" ./project --template "$TEMPLATE"; then
             echo "创建器应拒绝覆盖已有项目" >&2
             exit 1
           fi
-          cmp expected-readme reading-room/README.md
+          cmp expected-readme project/README.md
       - name: Install and customize the generated project
-        working-directory: ${{ runner.temp }}/consumer/reading-room
+        working-directory: ${{ runner.temp }}/consumer/project
         run: |
           npm ci
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict'
           import { writeFileSync } from 'node:fs'
           import config from './src/pocket.config.js'
-          assert.equal(config.brand.name, '青禾书房')
-          config.brand.name = '溪桥阅览室'
+          assert.equal(config.brand.name, process.env.ORIGINAL_NAME)
+          config.brand.name = process.env.BRAND
           writeFileSync('src/pocket.config.js', 'export default ' + JSON.stringify(config, null, 2) + '\n')
           JS
           npm run lint
           npm run icons:check
-      - name: Build H5 and verify both readers using the same shared link
-        working-directory: ${{ runner.temp }}/consumer/reading-room
+      - name: Build H5 and verify the template's account flows
+        working-directory: ${{ runner.temp }}/consumer/project
         run: |
           npm run build:h5
           npx --no-install playwright-core install --with-deps --only-shell chromium
           npm run check:h5
       - name: Build WeChat and verify the brand and optional modules
-        working-directory: ${{ runner.temp }}/consumer/reading-room
+        working-directory: ${{ runner.temp }}/consumer/project
         run: |
           npm run build:mp-weixin
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict'
           import { readFileSync } from 'node:fs'
+          import config from './src/pocket.config.js'
           const read = path => readFileSync('dist/build/' + path, 'utf8')
-          assert.ok(read('h5/index.html').includes('<title>溪桥阅览室 · 读者中心</title>'))
-          assert.equal(JSON.parse(read('mp-weixin/pages/index/index.json')).navigationBarTitleText, '溪桥阅览室')
-          const { subPackages } = JSON.parse(read('mp-weixin/app.json'))
-          assert.ok(subPackages.some(group => group.root === 'pocket-services' && group.pages.includes('loans/index')))
+          assert.ok(read('h5/index.html').includes('<title>' + process.env.BRAND + ' · ' + config.brand.subtitle + '</title>'))
+          assert.equal(JSON.parse(read('mp-weixin/pages/index/index.json')).navigationBarTitleText, process.env.BRAND)
+          const { subPackages = [] } = JSON.parse(read('mp-weixin/app.json'))
+          const services = subPackages.find(group => group.root === 'pocket-services')
+          if (process.env.TEMPLATE === 'basic') assert.equal(services, undefined)
+          else assert.ok(services.pages.includes('loans/index'))
           JS
           cd dist/build/mp-weixin
-          test -s components/ServiceStats.wxml
-          test -s pocket-services/loans/index.wxml
+          if [[ "$TEMPLATE" == reading-room ]]; then
+            test -s components/ServiceStats.wxml
+            test -s pocket-services/loans/index.wxml
+          else
+            test ! -e components/ServiceStats.wxml
+            test ! -e pocket-services/loans
+          fi
           test ! -e components/ServiceOrders.wxml
           test ! -e components/ServiceReviews.wxml

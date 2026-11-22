@@ -3,18 +3,21 @@ import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/pro
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { writeReadingRoom } from '../examples/reading-room/project.js'
+import { writeProject } from '../examples/projects.js'
+import { templateNames } from './creator/run.js'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const { version, license, engines } = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
 const destination = join(root, 'dist/creator')
 const stage = await mkdtemp(join(tmpdir(), 'nova-pocket-pack-'))
 try {
-  const template = join(stage, 'template')
-  await writeReadingRoom(template)
-  // Preserve project metadata that npm can omit or interpret when building a package.
-  await rename(join(template, '.gitignore'), join(template, 'gitignore.template'))
-  await rename(join(template, 'package-lock.json'), join(template, 'package-lock.json.template'))
+  for (const name of templateNames) {
+    const template = join(stage, 'templates', name)
+    await writeProject(template, name)
+    // Preserve project metadata that npm can omit or interpret when building a package.
+    await rename(join(template, '.gitignore'), join(template, 'gitignore.template'))
+    await rename(join(template, 'package-lock.json'), join(template, 'package-lock.json.template'))
+  }
   for (const file of ['cli.js', 'run.js', 'README.md']) {
     await cp(join(root, 'scripts/creator', file), join(stage, file))
   }

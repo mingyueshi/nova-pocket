@@ -9,7 +9,7 @@ import { promisify } from 'node:util'
 
 const run = promisify(execFile)
 const cli = fileURLToPath(new URL('../scripts/create-reading-room.js', import.meta.url))
-const create = path => run(process.execPath, [cli, path])
+const create = (...args) => run(process.execPath, [cli, ...args])
 
 async function tempDirectory(t) {
   const dir = await mkdtemp(join(tmpdir(), 'reading-room-test-'))
@@ -53,6 +53,34 @@ test('existing files, hidden contents and directory links are preserved', async 
   assert.deepEqual(await readdir(occupied), ['.keep'])
   assert.ok((await lstat(link)).isSymbolicLink())
   assert.deepEqual(await readdir(empty), [])
+})
+
+test('basic includes the local account adapter, its own README and no reading-room service', async t => {
+  const dir = await tempDirectory(t)
+  const target = join(dir, 'basic')
+  await create('--template', 'basic', target)
+  const pkg = JSON.parse(await readFile(join(target, 'package.json'), 'utf8'))
+  const lock = JSON.parse(await readFile(join(target, 'package-lock.json'), 'utf8'))
+  assert.equal(pkg.name, 'nova-pocket-basic')
+  assert.equal(lock.packages[''].name, pkg.name)
+  assert.equal(pkg.scripts.api, undefined)
+  assert.match(await readFile(join(target, 'README.md'), 'utf8'), /demo@example\.test/)
+  assert.deepEqual(await readFile(join(target, 'src/adapters/index.js')), await readFile(new URL('../src/adapters/index.js', import.meta.url)))
+  for (const path of ['server.js', 'src/pocket-services/loans', 'src/adapters/request.js']) {
+    await assert.rejects(lstat(join(target, path)), { code: 'ENOENT' })
+  }
+  await writeFile(join(target, 'README.md'), '自己的账户中心')
+  await assert.rejects(create(target, '--template', 'reading-room'), /新目录或空目录/)
+  assert.equal(await readFile(join(target, 'README.md'), 'utf8'), '自己的账户中心')
+})
+
+test('unsupported and conflicting template options fail before creating directories', async t => {
+  const dir = await tempDirectory(t)
+  const target = join(dir, 'new-parent', 'project')
+  for (const args of [['--template', 'typo'], ['--template=../basic'], ['--template=basic', '--template=reading-room']]) {
+    await assert.rejects(create(target, ...args), /basic\|reading-room/)
+  }
+  assert.deepEqual(await readdir(dir), [])
 })
 
 test('two concurrent creators cannot overwrite a project or leave staging files', async t => {

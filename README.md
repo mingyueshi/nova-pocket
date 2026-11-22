@@ -12,7 +12,16 @@ npm ci
 npm run dev:h5
 ```
 
-要以「青禾书房」为起点，从本仓库运行以下命令，生成带有源码、依赖锁文件、示例 API、许可证和 README 的独立项目。
+从本仓库选择模板生成独立项目。通用账户中心使用本地演示账号，开箱即可体验登录、资料和消息。
+
+```sh
+npm run create -- ../my-account --template basic
+cd ../my-account
+npm ci
+npm run dev:h5
+```
+
+青禾书房提供示例 HTTP API 和借阅分享。可显式使用 `--template reading-room`，也可沿用下面的默认命令。
 
 ```sh
 npm run create -- ../my-reading-room
@@ -20,11 +29,11 @@ cd ../my-reading-room
 npm ci
 ```
 
-创建命令接受新目录或空目录，遇到已有文件、非空目录或作为目标的符号链接会退出。生成后的启动、换品牌、双读者验收和构建步骤见新项目的 README。[仓库内示例与接入说明](examples/reading-room/README.md)
+创建命令接受新目录或空目录，遇到已有文件、非空目录或作为目标的符号链接会退出。每个模板都附有自己的启动、换品牌和验收说明。[通用账户中心](examples/basic/standalone.md) · [青禾书房接入示例](examples/reading-room/README.md)
 
-### 分发青禾书房创建器
+### 分发项目创建器
 
-在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、完整模板和两份使用说明打成一个版本包，输出在 `dist/creator/`。
+在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、两种模板和各自的使用说明打成一个版本包，输出在 `dist/creator/`。
 
 ```sh
 npm run pack:creator
@@ -33,12 +42,12 @@ npm run pack:creator
 把生成的 `.tgz` 交给下游开发者。对方将它放在自己的工作目录，按实际文件名运行以下命令即可创建项目。创建器从本地包读取模板，应用依赖随后由 `npm ci` 安装。
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.1.0.tgz -- create-nova-pocket ./my-reading-room
-cd my-reading-room
+npm exec --offline --yes --package=./create-nova-pocket-0.2.0.tgz -- create-nova-pocket ./my-account --template basic
+cd my-account
 npm ci
 ```
 
-包内的 `package/README.md` 说明如何创建项目，生成后的 `my-reading-room/README.md` 说明如何启动 API、换品牌以及做双端验收。[创建器使用说明](scripts/creator/README.md)
+包内的 `package/README.md` 说明如何选择模板，生成项目根目录的 README 说明如何启动、换品牌以及做双端验收。[创建器使用说明](scripts/creator/README.md)
 
 ## 构建
 
@@ -147,7 +156,7 @@ npm run icons:check
 
 图标名单在 `src/icons.js`。更新 Lucide 或调整图标名单后，运行 `npm run icons:sync` 生成色调变体，并提交对应资源。
 
-CI 将打好的 `.tgz` 交给没有检出源码的独立任务。该任务离线创建项目，对照源码生成的基准核验锁文件、示例 API、README 和两份许可证，检查重复创建会保留下游编辑。随后从 `npm ci` 开始，换品牌，在 Chromium 中用两位读者打开同一条借阅分享链接，并核对 H5 和微信小程序的构建产物。[生成项目的验收步骤](examples/reading-room/standalone.md#构建和验收)
+CI 用同一个 `.tgz` 在两个没有检出源码的任务里分别生成项目，核对锁文件、README、许可证及书房 API，并检查重复创建能保留下游编辑。两个项目都从 `npm ci` 开始，换品牌并构建 H5 和微信小程序。Chromium 分别验证通用账户的登录、昵称与消息已读，以及两位读者打开同一条借阅分享链接。[通用账户验收](examples/basic/standalone.md#构建和验收) · [书房验收](examples/reading-room/standalone.md#构建和验收)
 
 ## 项目结构
 

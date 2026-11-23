@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
-import { checkMobile } from './check-mobile.js'
+import { checkMessageReturn, checkMobile } from './check-mobile.js'
 import config from './src/pocket.config.js'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -21,7 +21,8 @@ try {
   const button = name => screen.getByRole('button', { name, exact: true })
   const tab = name => screen.getByRole('navigation').getByRole('button', { name, exact: true })
 
-  await page.goto('http://127.0.0.1:' + site.httpServer.address().port)
+  const origin = 'http://127.0.0.1:' + site.httpServer.address().port
+  await page.goto(origin)
   await label(config.brand.name).waitFor()
   await tab('消息，2 条未读通知').waitFor()
   assert.equal(await screen.getByRole('navigation').getByRole('button').count(), 3)
@@ -60,8 +61,14 @@ try {
   await page.reload()
   await tab('消息，1 条未读通知').click()
   await notification.getByText('已读', { exact: true }).waitFor()
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  phone.setDefaultTimeout(8000)
+  phone.on('pageerror', error => errors.push(error.message))
+  await phone.goto(origin)
+  await checkMessageReturn(phone, 'browser')
+  await phone.close()
   assert.deepEqual(errors, [])
-  await checkMobile('http://127.0.0.1:' + site.httpServer.address().port)
+  await checkMobile(origin)
   console.log('H5 验收通过：品牌、本地登录、昵称保存和消息已读。')
 } catch (error) {
   if (page) console.error(page.url(), await page.locator('body').innerText())

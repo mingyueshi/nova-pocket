@@ -1,14 +1,7 @@
-import config from '../pocket.config.js'
+import { notifications, pageSize } from './demo-messages.js'
 
 const demoUser = () => ({ id: 'demo', nickname: '演示用户', mode: 'member' })
-const notifications = [
-  { id: 'welcome', title: '欢迎使用 ' + config.brand.name, date: '刚刚', body: '这里演示通用账户通知、阅读状态和消息详情，不连接真实消息服务。' },
-  { id: 'security', title: '账号安全检查', date: '今天', body: '实际产品可提醒用户查看设备、登录记录和安全设置。当前只是示例。' },
-  { id: 'profile', title: '个人资料提示', date: '昨天', body: '用户可随时编辑昵称。可在账户中心管理展示昵称。' },
-  { id: 'appearance', title: '账户外观设置', date: '上周', body: '前往账户设置可以调整主题。' },
-  { id: 'guide', title: '账户中心使用指南', date: '上周', body: '通过底栏可以浏览服务、查看通知和管理资料。' },
-]
-const initiallyRead = ['profile', 'appearance', 'guide']
+const initiallyRead = notifications.filter(item => item.read).map(item => item.id)
 const sessionDuration = 7 * 24 * 60 * 60 * 1000
 
 export function createDemoAdapters(storage) {
@@ -29,7 +22,7 @@ export function createDemoAdapters(storage) {
       user = { ...saved.user }
       guest = saved.guest
       expiresAt = saved.expiresAt
-      read = new Set(saved.read)
+      read = new Set([...initiallyRead, ...saved.read])
     }
     if (!guest && Date.now() >= expiresAt) {
       const error = new Error('登录已过期，请重新登录')
@@ -110,7 +103,7 @@ export function createDemoAdapters(storage) {
       listPage({ cursor, limit }) {
         const all = list()
         const start = cursor ? all.findIndex(item => item.id === cursor) + 1 : 0
-        const items = all.slice(start, start + Math.min(3, limit))
+        const items = all.slice(start, start + Math.min(pageSize, limit))
         const nextCursor = start + items.length < all.length ? items[items.length - 1].id : null
         return { items, nextCursor, unreadCount: all.filter(item => !item.read).length }
       },

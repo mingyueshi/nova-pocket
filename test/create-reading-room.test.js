@@ -4,7 +4,7 @@ import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
 const run = promisify(execFile)
@@ -72,6 +72,33 @@ test('basic includes the local account adapter, its own README and no reading-ro
   await writeFile(join(target, 'README.md'), '自己的账户中心')
   await assert.rejects(create(target, '--template', 'reading-room'), /新目录或空目录/)
   assert.equal(await readFile(join(target, 'README.md'), 'utf8'), '自己的账户中心')
+})
+
+test('basic keeps legacy demo reads and shares while adding three pages of history', async t => {
+  const project = join(await tempDirectory(t), 'basic')
+  await create('--template', 'basic', project)
+  const { createDemoAdapters } = await import(pathToFileURL(join(project, 'src/adapters/demo.js')))
+  let snapshot = { version: 1, user: { id: 'demo', nickname: '江舟', mode: 'member' }, guest: false,
+    expiresAt: Date.now() + 60000, read: ['welcome', 'profile', 'appearance', 'guide'] }
+  const storage = { load: () => snapshot, save: value => { snapshot = value } }
+  const { auth, messages } = createDemoAdapters(storage)
+  assert.equal(auth.getSession().nickname, '江舟')
+  const ids = []
+  let cursor = null
+  for (let page = 0; page < 3; page++) {
+    const batch = messages.listPage({ cursor, limit: 20 })
+    assert.equal(batch.items.length, 16)
+    assert.equal(batch.unreadCount, 1)
+    ids.push(...batch.items.map(item => item.id))
+    cursor = batch.nextCursor
+  }
+  assert.equal(cursor, null)
+  assert.equal(new Set(ids).size, 48)
+  assert.equal(ids[39], 'security')
+  assert.equal(messages.get('welcome').read, true)
+  assert.equal(messages.get('security').read, false)
+  messages.markRead(['security'])
+  assert.equal(createDemoAdapters(storage).messages.listPage({ cursor: null, limit: 20 }).unreadCount, 0)
 })
 
 test('unsupported and conflicting template options fail before creating directories', async t => {

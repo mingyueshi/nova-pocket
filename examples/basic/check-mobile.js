@@ -23,6 +23,44 @@ async function tap(page, control) {
   await page.touchscreen.tap(point.x, point.y)
 }
 
+export async function checkMessageReturn(page, back) {
+  const screen = page.locator('uni-page').last()
+  const nav = name => screen.getByRole('navigation').getByRole('button', { name, exact: true })
+  const rows = screen.locator('.message-rows').getByRole('button')
+  const more = screen.getByRole('button', { name: '加载更多', exact: true })
+  await tap(page, nav('消息，2 条未读通知'))
+  for (const total of [16, 32, 48]) {
+    if (total > 16) await tap(page, more)
+    await rows.nth(total - 1).waitFor()
+    assert.equal(await rows.count(), total)
+  }
+  assert.equal(await more.count(), 0)
+  const row = rows.filter({ hasText: '账号安全检查' })
+  await row.getByText('未读', { exact: true }).waitFor()
+  await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
+  const position = () => row.evaluate(el => {
+    const list = el.closest('.uni-scroll-view')
+    return { scroll: list.scrollTop, height: list.clientHeight, y: el.getBoundingClientRect().top }
+  })
+  const before = await position()
+  assert.ok(before.scroll >= 2 * before.height, '目标行应在至少两个可视区域之后')
+  await tap(page, row)
+  await page.waitForURL(/view=message&id=security/)
+  await screen.getByText('账号安全检查', { exact: true }).waitFor()
+  await nav('消息，1 条未读通知').waitFor()
+  if (back === 'browser') await page.goBack()
+  else await tap(page, screen.locator('[aria-label="返回上一页"]'))
+  await row.getByText('已读', { exact: true }).waitFor()
+  const after = await position() // Read before performing any scroll or tap on the list.
+  assert.ok(Math.abs(after.scroll - before.scroll) <= 2, '返回后列表滚动位置变化超过 2px')
+  assert.ok(Math.abs(after.y - before.y) <= 2, '返回后原行在屏幕上的位置变化超过 2px')
+  assert.equal(await rows.count(), 48, '返回后应保留三页消息')
+  await rows.last().getByText('账户中心使用指南', { exact: true }).waitFor()
+  await nav('消息，1 条未读通知').waitFor()
+  console.log(page.viewportSize().width + 'px 消息返回通过 (' + back + ')：scrollTop ' +
+    before.scroll + ' → ' + after.scroll + '，行顶 ' + before.y + ' → ' + after.y + '，可视区高 ' + before.height)
+}
+
 export async function checkMobile(origin) {
   const browser = await chromium.launch({ args: ['--blink-settings=minimumFontSize=24'] })
   try {
@@ -66,7 +104,8 @@ export async function checkMobile(origin) {
     await tap(page, nav('我的'))
     await tap(page, button('编辑资料'))
     await reduceViewport(input)
-    await input.fill(nickname)
+    const draft = nickname.slice(0, -1)
+    await input.fill(draft)
     await input.evaluate(el => el.scrollIntoView({ block: 'center' }))
     const fieldOffset = () => input.evaluate(el => el.closest('.uni-scroll-view').scrollTop)
     const draftOffset = await fieldOffset()
@@ -76,9 +115,19 @@ export async function checkMobile(origin) {
     await dialog.getByText('放弃未保存的资料？', { exact: true }).waitFor()
     await tap(page, dialog.getByText('取消', { exact: true }))
     await dialog.waitFor({ state: 'hidden' })
-    assert.equal(await input.inputValue(), nickname, '取消离开应保留未保存的昵称')
+    assert.equal(await input.inputValue(), draft, '取消离开应保留未保存的昵称')
     assert.ok(Math.abs(await fieldOffset() - draftOffset) <= 2, '取消离开应保留资料表单位置')
     await reduceViewport(input)
+    await input.evaluate(el => el.setSelectionRange(el.value.length, el.value.length))
+    const ime = await page.context().newCDPSession(page)
+    try {
+      await ime.send('Input.imeSetComposition', { text: 'zhou', selectionStart: 4, selectionEnd: 4 })
+      assert.equal(await input.inputValue(), draft + 'zhou', '应能在原草稿末尾继续组合输入')
+      await ime.send('Input.insertText', { text: '舟' })
+      assert.equal(await input.inputValue(), nickname, '确认候选字应替换拼音并保留整段昵称')
+    } finally {
+      await ime.detach()
+    }
     await tap(page, button('保存资料'))
     await text(nickname).waitFor()
     await screen.getByRole('heading', { name: '我的' }).waitFor()
@@ -96,25 +145,7 @@ export async function checkMobile(origin) {
     await page.reload()
     await text(nickname).waitFor()
 
-    await tap(page, nav('消息，2 条未读通知'))
-    await tap(page, button('加载更多'))
-    const row = screen.getByRole('button').filter({ hasText: '账号安全检查' })
-    const last = text('账户中心使用指南')
-    await last.waitFor()
-    await row.evaluate(el => el.scrollIntoView({ block: 'center' }))
-    const offset = () => row.evaluate(el => el.closest('.uni-scroll-view').scrollTop)
-    const before = await offset()
-    assert.ok(before > 20, '消息列表必须已经滚动，才能验证返回位置')
-    const rowY = (await row.boundingBox()).y
-    await tap(page, row)
-    await page.waitForURL(/view=message/)
-    await nav('消息，1 条未读通知').waitFor()
-    await tap(page, screen.locator('[aria-label="返回上一页"]'))
-    await row.getByText('已读', { exact: true }).waitFor()
-    await last.waitFor()
-    assert.ok(Math.abs(await offset() - before) <= 2, '从详情返回后应保留列表滚动位置')
-    assert.ok(Math.abs((await row.boundingBox()).y - rowY) <= 2, '返回后应看到同一行')
-    await nav('消息，1 条未读通知').waitFor()
+    await checkMessageReturn(page, 'page')
 
     await tap(page, nav('我的'))
     await tap(page, button('账户设置'))
@@ -130,7 +161,7 @@ export async function checkMobile(origin) {
     await page.setViewportSize(viewport)
     await button('编辑资料').waitFor()
     assert.deepEqual(errors, [])
-    console.log('320px 触屏验收通过。24px 最小字号，20 字符昵称，缩短视口后保存和登录，取消返回保留草稿，消息详情返回保留已读、分页和滚动位置。')
+    console.log('320px 触屏验收通过。24px 最小字号，20 字符昵称，缩短视口后保存和登录，取消返回保留草稿并继续组合输入，消息详情返回保留已读、分页和滚动位置。')
   } finally {
     await browser.close()
   }

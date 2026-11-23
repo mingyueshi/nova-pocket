@@ -103,7 +103,7 @@ watch(account, () => {
 onUnmounted(() => { active = false; clearInterval(timer) })
 </script>
 <template>
-<view class="surface auth" :class="activeTheme.base" :style="activeTheme.style">
+<view class="surface np-surface auth" :class="activeTheme.base" :style="activeTheme.style">
  <view class="auth-top" :style="headerPadding"><button role="button" class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
  <view class="auth-content">
   <view class="auth-mark"><image v-if="config.brand.logo" class="auth-logo" mode="aspectFit" :src="config.brand.logo" /><NovaIcon v-else name="sparkles" :tone="activeTheme.base==='dark'?'muted':'white'" :size="26" /></view>

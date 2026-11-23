@@ -15,12 +15,20 @@
 
 ## 移入已有项目
 
-- 保留宿主的 App、原生 tabBar、首页和登录页。在 pages.json 注册 `pages/account/detail` 和需要的 `pages/account/profile`，沿用本示例的自定义导航设置。「我的」tab 渲染 AccountScreen，传 `route="mine" tab="mine"`。在 blocks.mine 中移动 business 即可调整宿主业务入口的位置，按钮与跳转由 business 插槽提供，参见本项目的 src/pages/trail/mine.vue。
-- 复制本项目的通用组件、组件引用的 JS 模块、account.css 和 static/icons（含许可证）。在宿主 App 引入 account.css，保留宿主自己的全局样式。在主入口沿用 src/main.js 的 H5 未保存表单返回保护与键盘缩小视口时的输入框定位。在宿主 App 的 onShow 恢复账户会话，在宿主登录或切换账号成功后也调用 account.restoreSession()。
-- 在 pocket.config.js 的 host.accountTab 填「我的」原生底栏路径，在 host.loginPage 填普通登录页路径，tabs 保留 mine。brand 使用宿主品牌，账户页配色集中在 `themes.trail`，`defaultTheme: 'trail'` 使头像、按钮与图标沿用山岚绿。宿主页面和原生导航栏在宿主的 pages.json 维护。
-- 将 adapters/index.js 的 auth.getSession、auth.updateProfile、auth.logout 以及 messages 映射到宿主已有服务。宿主继续管理凭据。无需资料编辑时省略 updateProfile。没有收件箱时导出 messages = null。宿主适配器导出 demoSettingsEnabled = false。
-- 在 accountPages 中按需注册 security（设备、验证方式等）、activity、notifications、privacy、help。每个值都是已注册的普通页面绝对路径，页面负责数据、登录校验和保存操作。空缺的能力不会生成菜单或可用的详情链接。
-- 在宿主业务页使用 openAccountView('message', id, 'mine') 打开账户详情。宿主登录页通过 accountTarget 和 pageRecordId 解析登录目标，成功后调用 leaveAuthPages(target)，取消时调用 leaveAuthPages()。保留已存在的宿主页栈，冷启动回退由 host.accountTab 接管。可直接参照 src/pages/trail/login.vue。
-- H5 和小程序构建沿用 scripts/uni.js 的条件编译参数，以及生成项目根目录的 index.html 和 Vite 入口约定。合并到既有 Vite 构建时，从 `scripts/theme-icons.js` 引入 `themeIcons` 并将 `themeIcons()` 加入原有插件列表，用于开发预览与两端构建的本地强调色图标。模板的 `package.json` 将 `#pocket/types` 映射到 `src/pocket-types.d.ts`。复制接入时也可以在 JSDoc 中用相对路径引用此文件。
+本示例通过 `src/uni_modules/nova-pocket/` 使用独立模块。新宿主从版本包安装模块，使用包内 README 完成首次接线。已有宿主升级时再次运行安装命令，再构建 H5 和微信小程序。
 
-项目源码采用 [MIT 许可证](LICENSE)，图标许可随 [图标资源](src/static/icons/LICENSE.txt) 分发。
+```sh
+npm exec --offline --yes --package=./nova-pocket-module-0.1.0.tgz -- install-nova-pocket .
+```
+
+| 宿主文件 | 山岚步道的接法 |
+| --- | --- |
+| `src/pocket.config.js`、`src/adapters/index.js` | 提供品牌、区块、会员和消息接口。实际数据保存在宿主的 `src/trail/member.js` |
+| `src/pages.json`、`src/pages/trail/mine.vue` | 注册模块的资料与详情页，「我的」原生底栏加载 AccountScreen，通过 business 插槽插入行程入口 |
+| `src/App.vue`、`src/main.js`、`vite.config.js` | 引入模块 CSS，在 onShow 恢复会话，安装 H5 表单监听，并在宿主 Vite 插件列表添加 `pocketPlugin(pages)` |
+| `src/pages/trail/login.vue`、`walk.vue` | 通过模块的 `index.js` 打开通知、传递登录目标并回到业务页。宿主保管会员存储与登录流程 |
+| `src/pages/account/` | 两个转发页仅用于原版山岚步道的旧链接。新链接使用 `/uni_modules/nova-pocket/pages/account/` 下的页面 |
+
+从旧版复制式示例迁移时，先安装模块，参照上述宿主文件替换导入、页面注册和 Vite 配置。启动脚本使用宿主自己的 UniApp CLI；保留原会员存储键、业务页和分享转发页。完成上面四项交互验收后即可移除已无引用的旧副本。
+
+`src/uni_modules/nova-pocket/README.md` 提供接线清单和类型说明。项目与模块采用 MIT 许可，图标许可位于模块的 `static/icons/LICENSE.txt`。

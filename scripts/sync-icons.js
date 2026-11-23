@@ -1,8 +1,9 @@
 import { readFile, writeFile, readdir } from 'node:fs/promises'
-import { iconNames, iconTones } from '../src/icons.js'
+const runtime = new URL(process.argv.includes('--module') ? '../src/uni_modules/nova-pocket/' : '../src/', import.meta.url)
+const { iconNames, iconTones } = await import(new URL('icons.js', runtime))
 
 const upstream = new URL('../node_modules/lucide-static/', import.meta.url)
-const output = new URL('../src/static/icons/', import.meta.url)
+const output = new URL('static/icons/', runtime)
 const checkOnly = process.argv.includes('--check')
 const assets = new Map([['LICENSE.txt', await readFile(new URL('LICENSE', upstream), 'utf8')]])
 

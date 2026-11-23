@@ -4,13 +4,13 @@ import { configuredBlocks, resolveBlocks } from '../account-blocks.js'
 import AccountIdentity from './AccountIdentity.vue'
 import NovaIcon from './NovaIcon.vue'
 import NovaRow from './NovaRow.vue'
-// #ifndef POCKET_NO_STATS
+// #ifdef NOVA_POCKET_DEMO_STATS
 import ServiceStats from './ServiceStats.vue'
 // #endif
-// #ifndef POCKET_NO_ORDERS
+// #ifdef NOVA_POCKET_DEMO_ORDERS
 import ServiceOrders from './ServiceOrders.vue'
 // #endif
-// #ifndef POCKET_NO_REVIEWS
+// #ifdef NOVA_POCKET_DEMO_REVIEWS
 import ServiceReviews from './ServiceReviews.vue'
 // #endif
 import MessagePanel from './MessagePanel.vue'
@@ -19,7 +19,7 @@ import { useHeaderPadding } from '../use-header-padding.js'
 import config from '../pocket.config.js'
 import { auth, demoSettingsEnabled } from '../adapters/index.js'
 import { accountTarget, host, requiresLogin, isTab, openAccountView, returnToAccountHome, services, shortcuts, tabs, viewNames } from '../account-navigation.js'
-// #ifndef POCKET_NO_RECORDS
+// #ifdef NOVA_POCKET_DEMO_RECORDS
 import { resetServiceDemo } from '../service-demo.js'
 // #endif
 import { account, activeTheme, mutedTone as tone, authRoute, confirm, hint, layouts, modes, reset, scenarios, state, themes } from '../state.js'
@@ -116,7 +116,7 @@ async function logout() {
 async function restore() {
   if (!await confirm('重置演示？', '布局、主题、昵称和消息状态都会恢复默认。', '重置')) return
   reset()
-  // #ifndef POCKET_NO_RECORDS
+  // #ifdef NOVA_POCKET_DEMO_RECORDS
   resetServiceDemo()
   // #endif
   hint('演示已重置')
@@ -128,7 +128,7 @@ function explain(title, content) {
 
 </script>
 <template>
-<view class="surface account-app" :style="activeTheme.style" :class="[activeTheme.base, {'host-tab':host && !isDetail, embedded:!!host}]">
+<view class="surface np-surface account-app" :style="activeTheme.style" :class="[activeTheme.base, {'host-tab':host && !isDetail, embedded:!!host}]">
  <scroll-view scroll-y class="screen" :scroll-top="scrollTo" @scroll="storeScroll">
   <view class="shell" :style="headerPadding">
    <view class="app-head" :class="{'sub-head':isDetail}">
@@ -176,13 +176,13 @@ function explain(title, content) {
     </view></view>
     <text v-if="demoSettingsEnabled" class="note">这里使用模拟记录，不会产生付款、交易或公开评论。</text>
    </view>
-   <!-- #ifndef POCKET_NO_STATS -->
+   <!-- #ifdef NOVA_POCKET_DEMO_STATS -->
    <view v-else-if="route==='stats'" class="details"><ServiceStats /></view>
    <!-- #endif -->
-   <!-- #ifndef POCKET_NO_ORDERS -->
+   <!-- #ifdef NOVA_POCKET_DEMO_ORDERS -->
    <view v-else-if="route==='orders'||route==='order'" class="details"><ServiceOrders :view="route" :id="recordId" @navigate="serviceNavigate" /></view>
    <!-- #endif -->
-   <!-- #ifndef POCKET_NO_REVIEWS -->
+   <!-- #ifdef NOVA_POCKET_DEMO_REVIEWS -->
    <view v-else-if="route==='reviews'||route==='review'" class="details"><ServiceReviews :view="route" :id="recordId" @navigate="serviceNavigate" /></view>
    <!-- #endif -->
 

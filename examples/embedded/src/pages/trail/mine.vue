@@ -1,7 +1,7 @@
 <script setup>
 import { onShow } from '@dcloudio/uni-app'
-import { account } from '../../state.js'
-import AccountScreen from '../../components/AccountScreen.vue'
+import { account } from '../../uni_modules/nova-pocket/index.js'
+import AccountScreen from '../../uni_modules/nova-pocket/components/AccountScreen.vue'
 // Reconcile changes made on host pages while this native tab was hidden.
 onShow(() => account.restoreSession())
 function showWalk() { uni.navigateTo({ url: '/pages/trail/walk' }) }

@@ -5,7 +5,12 @@ import { preview } from 'vite'
 import config from './src/pocket.config.js'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
-const site = await preview({ root, configFile: false, build: { outDir: 'dist/build/h5' }, preview: { host: '127.0.0.1', port: 0 } })
+// The upgrade check serves two real builds on one origin to keep the same browser storage.
+const previousBuild = process.argv[2]
+const serve = (outDir, port) => preview({
+  root, configFile: false, build: { outDir }, preview: { host: '127.0.0.1', port, strictPort: true },
+})
+let site = await serve(previousBuild || 'dist/build/h5', 0)
 let browser, page
 try {
   browser = await chromium.launch()
@@ -50,6 +55,22 @@ try {
   await label('河岸晨行').click()
   await label('加入行程').click()
   await label('已加入行程').waitFor()
+  if (previousBuild) {
+    const port = site.httpServer.address().port
+    await site.close()
+    site = await serve('dist/build/h5', port)
+    await page.goto(origin)
+    await label('江舟的路线').waitFor()
+    await tab('我的').click()
+    await label('江舟').waitFor()
+    await label('账户设置').click()
+    await label('通知偏好').click()
+    await reminder.waitFor()
+    assert.equal(await reminder.locator('.uni-switch-input-checked').count(), 0, '升级后应保留已关闭的行程提醒')
+    await page.goto(origin)
+    await label('河岸晨行').click()
+    await label('已加入行程').waitFor()
+  }
   await page.goBack()
   await tab('我的').click()
   await label('行程通知').click()
@@ -62,6 +83,8 @@ try {
   await label('你好，访客').waitFor()
   await tab('路线').click()
   await label('访客路线').waitFor()
+  assert.equal(await screen.locator('.trail-page').evaluate(el => window.getComputedStyle(el).getPropertyValue('--brand')), '',
+    '用户中心样式应仅应用于账户页面')
   await label('河岸晨行').click()
   await label('查看集合通知').click()
   await label('去登录').click()
@@ -69,6 +92,7 @@ try {
   await label('去登录').click()
   await label('以步道会员登录').click()
   await label('请在南门步道入口集合。').waitFor()
+  await page.waitForURL(/uni_modules\/nova-pocket\/pages\/account\/detail/)
   await back()
   await label('查看集合通知').waitFor()
   await page.goBack()
@@ -78,6 +102,7 @@ try {
   await page.goto(origin + detail)
   await page.reload()
   await label('请在南门步道入口集合。').waitFor()
+  await page.waitForURL(/uni_modules\/nova-pocket\/pages\/account\/detail/)
   await back()
   await label('行程通知').waitFor()
   await page.goto(origin + '/#/pages/account/detail?view=security')

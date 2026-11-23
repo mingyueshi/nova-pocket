@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import config from './pocket.config.js'
+import { accountPageRoot } from './pocket-paths.js'
 import { auth, messages, demoSettingsEnabled } from './adapters/index.js'
 import { configuredServicePages, serviceRoot } from './service-pages.js'
 
@@ -7,8 +8,8 @@ const tabKeys = ['home', 'services', 'messages', 'mine']
 const moduleOwners = { order: 'orders', review: 'reviews' }
 const parents = { ...moduleOwners, privacy: 'settings' }
 const indexPath = 'pages/index/index'
-const profilePath = '/pages/account/profile'
-export const detailPath = '/pages/account/detail'
+const profilePath = accountPageRoot + '/profile'
+export const detailPath = accountPageRoot + '/detail'
 
 const optionalPages = { security: '账户安全', activity: '最近活动', notifications: '通知偏好', privacy: '隐私说明', help: '帮助与反馈' }
 export const host = config.host
@@ -127,7 +128,7 @@ function previousAccountTarget(page) {
   if (host && '/' + page.route === host.accountTab) return accountTarget(firstTab)
   const linked = Object.entries(config.accountPages || {}).find(([, path]) => path === '/' + page.route)
   if (linked) return accountTarget(linked[0])
-  if (page.route === indexPath) return accountTarget(rootTab.value)
+  if (!host && page.route === indexPath) return accountTarget(rootTab.value)
   if ('/' + page.route === profilePath) return accountTarget('profile', '', query.tab)
   if ('/' + page.route === detailPath) return accountTarget(query.view, pageRecordId(query.id), query.tab)
   return accountTarget(serviceViewForPath(page.route), pageRecordId(query.id), query.tab)

@@ -1,3 +1,5 @@
+import { staticRoot } from './pocket-paths.js'
+
 export const iconNames = [
   'bell', 'chart-no-axes-combined', 'chevron-left', 'chevron-right', 'circle-alert',
   'circle-help', 'clock-3', 'eye', 'eye-off', 'key-round', 'layers', 'layout-grid',
@@ -14,8 +16,8 @@ export function iconSource(name, tone) {
   if (typeof tone === 'string' && /^#[0-9a-f]{6}$/i.test(tone)) {
     const hex = tone.toLowerCase()
     tone = tonesByColor.get(hex)
-    if (!tone) return '/static/pocket-accents/' + icon + '-' + hex.slice(1) + '.svg'
+    if (!tone) return staticRoot + '/pocket-accents/' + icon + '-' + hex.slice(1) + '.svg'
   }
   const color = Object.prototype.hasOwnProperty.call(iconTones, tone) ? tone : 'muted'
-  return '/static/icons/' + icon + '-' + color + '.svg'
+  return staticRoot + '/icons/' + icon + '-' + color + '.svg'
 }

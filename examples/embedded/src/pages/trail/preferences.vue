@@ -2,8 +2,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSession, getReminders, setReminders } from '../../trail/member.js'
-import { authRoute } from '../../state.js'
-import { accountTarget } from '../../account-navigation.js'
+import { accountTarget, authRoute } from '../../uni_modules/nova-pocket/index.js'
 const signedIn = ref(false)
 const enabled = ref(false)
 onShow(() => {

@@ -14,13 +14,15 @@
     "dev:h5": "node scripts/uni.js",
     "build:h5": "node scripts/uni.js build",
     "build:mp-weixin": "node scripts/uni.js build -p mp-weixin",
-    "lint": "eslint src scripts test examples vite.config.js",
+    "lint": "eslint src scripts module test examples vite.config.js",
     "test": "node --test",
     "icons:sync": "node scripts/sync-icons.js",
     "icons:check": "node scripts/sync-icons.js --check",
     "example:prepare": "node examples/reading-room/prepare.js",
     "example:api": "node examples/reading-room/server.js",
-    "example:check:h5": "node scripts/check-reading-room.js"
+    "example:check:h5": "node scripts/check-reading-room.js",
+    "pack:module": "node scripts/pack-module.js",
+    "check:module-upgrade": "node scripts/check-module-upgrade.js"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5030420261029002",

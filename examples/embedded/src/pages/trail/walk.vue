@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSession, hasJoined, joinWalk, routeNoticeId } from '../../trail/member.js'
-import { openAccountView } from '../../account-navigation.js'
+import { openAccountView } from '../../uni_modules/nova-pocket/index.js'
 
 const joined = ref(false)
 const member = ref(null)

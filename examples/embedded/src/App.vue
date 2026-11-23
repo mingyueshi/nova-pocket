@@ -1,11 +1,11 @@
 <script>
-import { account } from './state.js'
+import { account } from './uni_modules/nova-pocket/index.js'
 export default {
   onShow() { account.restoreSession() },
 }
 </script>
 
-<style src="./account.css"></style>
+<style src="./uni_modules/nova-pocket/account.css"></style>
 <style>
 page{background:#f3f6f2;color:#203c33;font-family:system-ui,sans-serif}
 .trail-page{max-width:520px;margin:auto;padding:24px 20px;display:flex;flex-direction:column;gap:16px}

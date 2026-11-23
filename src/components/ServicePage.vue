@@ -19,7 +19,7 @@ function copyLink() {
 </script>
 
 <template>
-  <view class="surface service-page" :class="activeTheme.base" :style="activeTheme.style">
+  <view class="surface np-surface service-page" :class="activeTheme.base" :style="activeTheme.style">
     <view class="service-body np-stack">
       <StatePanel v-if="!target" title="页面不可用" action="返回账户中心" @action="returnToAccountHome" />
       <StatePanel v-else-if="session.status === 'idle' || session.status === 'loading'" title="正在加载账户…" />

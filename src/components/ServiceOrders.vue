@@ -53,7 +53,7 @@ function open(view, id) {
       <view class="service-data"><text>创建时间</text><text>{{ order.date }}</text></view>
       <text class="note">仅演示状态，不会付款、发货或预约服务。</text>
     </view>
-    <!-- #ifndef POCKET_NO_REVIEWS -->
+    <!-- #ifdef NOVA_POCKET_DEMO_REVIEWS -->
     <button v-if="order.status === 'complete' && isDetail('review')" class="btn primary" @click="open('review', order.id)">
       {{ serviceDemo.reviews[order.id] ? '查看我的评价' : '发表评价' }}
     </button>

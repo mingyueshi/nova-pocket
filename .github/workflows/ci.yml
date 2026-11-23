@@ -24,6 +24,9 @@ jobs:
       - run: npm run icons:check
       - run: npm run build:h5
       - run: npm run build:mp-weixin
+      - run: npm run pack:module
+      - run: npx --no-install playwright-core install --with-deps --only-shell chromium
+      - run: npm run check:module-upgrade
   pack:
     runs-on: ubuntu-latest
     outputs:
@@ -44,7 +47,12 @@ jobs:
           for template in basic reading-room embedded; do
             target="$RUNNER_TEMP/reference-$template"
             npm run create -- "$target" --template "$template"
-            files=(package.json package-lock.json .gitignore README.md LICENSE src/static/icons/LICENSE.txt src/pocket.config.js docs/mobile-acceptance.md check-h5.js)
+            files=(package.json package-lock.json .gitignore README.md LICENSE src/pocket.config.js docs/mobile-acceptance.md check-h5.js)
+            if [[ "$template" == embedded ]]; then
+              files+=(src/uni_modules/nova-pocket/package.json src/uni_modules/nova-pocket/static/icons/LICENSE.txt)
+            else
+              files+=(src/static/icons/LICENSE.txt)
+            fi
             if [[ "$template" == basic ]]; then files+=(check-mobile.js); fi
             if [[ "$template" == reading-room ]]; then files+=(server.js); fi
             {
@@ -144,9 +152,11 @@ jobs:
           import { readFileSync } from 'node:fs'
           import config from './src/pocket.config.js'
           const read = path => readFileSync('dist/build/' + path, 'utf8')
-          assert.ok(read('h5/index.html').includes('<title>' + process.env.BRAND + ' · ' + config.brand.subtitle + '</title>'))
-          const { configuredThemes } = await import('./src/themes.js')
-          const { iconSource } = await import('./src/icons.js')
+          const title = config.host ? JSON.parse(readFileSync('src/manifest.json', 'utf8')).h5.title : process.env.BRAND + ' · ' + config.brand.subtitle
+          assert.ok(read('h5/index.html').includes('<title>' + title + '</title>'))
+          const runtime = config.host ? './src/uni_modules/nova-pocket/' : './src/'
+          const { configuredThemes } = await import(runtime + 'themes.js')
+          const { iconSource } = await import(runtime + 'icons.js')
           for (const { iconAccent } of configuredThemes(config).values()) {
             const asset = iconSource('layers', iconAccent)
             for (const target of ['h5', 'mp-weixin']) {

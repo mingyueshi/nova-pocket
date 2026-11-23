@@ -1,7 +1,6 @@
 <script setup>
 import { onLoad } from '@dcloudio/uni-app'
-import { accountTarget, leaveAuthPages, pageRecordId } from '../../account-navigation.js'
-import { account } from '../../state.js'
+import { account, accountTarget, leaveAuthPages, pageRecordId } from '../../uni_modules/nova-pocket/index.js'
 import { signIn } from '../../trail/member.js'
 import config from '../../pocket.config.js'
 

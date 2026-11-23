@@ -59,3 +59,10 @@ export function resolveBlocks(configured, { page, layout, embedded, groups, entr
   }
   return result
 }
+
+export function validateLayoutConfig(config) {
+  if (!['overview', 'shortcuts', 'minimal'].includes(config.defaultLayout)) {
+    throw new Error('pocket.config.js: defaultLayout 应为 overview、shortcuts 或 minimal')
+  }
+  configuredBlocks(config.blocks)
+}

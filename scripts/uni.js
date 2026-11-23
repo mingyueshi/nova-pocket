@@ -1,15 +1,13 @@
+import { validatePageLinks } from '../src/validate-page-links.js'
 // Prepare the native UniApp metadata and conditional compilation before the CLI reads them.
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { configuredBlocks } from '../src/account-blocks.js'
+import { validateLayoutConfig } from '../src/account-blocks.js'
 import { configuredThemes } from '../src/themes.js'
 import config from '../src/pocket.config.js'
 import { configuredServicePages, serviceRoot, syncServicePackage } from '../src/service-pages.js'
 
 configuredThemes(config)
-if (!['overview', 'shortcuts', 'minimal'].includes(config.defaultLayout)) {
-  throw new Error('pocket.config.js: defaultLayout 应为 overview、shortcuts 或 minimal')
-}
-configuredBlocks(config.blocks)
+validateLayoutConfig(config)
 const servicePages = configuredServicePages(config)
 for (const path of servicePages.values()) {
   const file = 'src/' + serviceRoot + '/' + path + '.vue'
@@ -32,21 +30,7 @@ syncMetadata('src/manifest.json', manifest => {
   manifest.h5.title = title
 })
 syncMetadata('src/pages.json', pages => {
-  const pagePaths = new Set(pages.pages.map(page => '/' + page.path))
-  for (const group of pages.subPackages || pages.subpackages || []) {
-    for (const page of group.pages) pagePaths.add('/' + group.root + '/' + page.path)
-  }
-  const tabPaths = new Set((pages.tabBar?.list || []).map(tab => '/' + tab.pagePath))
-  for (const [key, path] of Object.entries(config.accountPages || {})) {
-    if (!['security', 'activity', 'notifications', 'privacy', 'help'].includes(key) ||
-        !pagePaths.has(path) || tabPaths.has(path) || path === '/pages/account/detail') {
-      throw new Error('accountPages.' + key + ' 需指向已注册的宿主普通页面：' + path)
-    }
-  }
-  if (config.host && (!tabPaths.has(config.host.accountTab) || !pagePaths.has(config.host.loginPage) ||
-      tabPaths.has(config.host.loginPage) || config.tabs.length !== 1 || config.tabs[0][0] !== 'mine')) {
-    throw new Error('宿主需注册 accountTab 原生底栏与 loginPage 普通页面，账户入口须为 mine')
-  }
+  validatePageLinks(config, pages, '/pages/account/detail')
   syncServicePackage(pages, servicePages, config.modules)
   for (const page of pages.pages) {
     if (!config.host && ['pages/index/index', 'pages/account/detail'].includes(page.path)) page.style.navigationBarTitleText = name
@@ -56,9 +40,9 @@ process.env.VITE_POCKET_TITLE = title.replaceAll('&', '&amp;').replaceAll('<', '
 process.env.VITE_POCKET_ICON = (config.brand.logo || '/static/icons/sparkles-blue.svg')
   .replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
 const hasServices = config.tabs.some(([key]) => key === 'services')
-const excluded = Object.fromEntries(['orders', 'reviews', 'stats'].map(key => [
-  'POCKET_NO_' + key.toUpperCase(), !hasServices || !config.modules[key]?.enabled,
+const enabled = Object.fromEntries(['orders', 'reviews', 'stats'].map(key => [
+  'NOVA_POCKET_DEMO_' + key.toUpperCase(), hasServices && Boolean(config.modules[key]?.enabled),
 ]))
-excluded.POCKET_NO_RECORDS = excluded.POCKET_NO_ORDERS && excluded.POCKET_NO_REVIEWS
-process.env.UNI_CUSTOM_CONTEXT = JSON.stringify(excluded)
+enabled.NOVA_POCKET_DEMO_RECORDS = enabled.NOVA_POCKET_DEMO_ORDERS || enabled.NOVA_POCKET_DEMO_REVIEWS
+process.env.UNI_CUSTOM_CONTEXT = JSON.stringify(enabled)
 await import('@dcloudio/vite-plugin-uni/bin/uni.js')

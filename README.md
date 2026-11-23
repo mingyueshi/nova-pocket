@@ -44,6 +44,18 @@ npm run dev:h5
 
 接入时配置 `host.accountTab`、`host.loginPage`，把适配器映射到现有账户服务。资料编辑和消息入口跟随适配器能力。安全、活动、通知偏好、隐私与帮助通过 `accountPages` 指向宿主已注册的普通页面，未接入的能力在菜单和详情链接中同时关闭。通知偏好的读取、保存与生效由宿主实现。独立模板仍使用自己的导航与认证页面。[宿主接入与双端验收](examples/embedded/standalone.md) · [宿主路由](examples/embedded/src/pages.json) · [会员适配器](examples/embedded/src/adapters/index.js)
 
+### 安装或升级独立用户中心模块
+
+在本仓库运行 `npm run pack:module` 得到 `dist/module/nova-pocket-module-0.1.0.tgz`。把文件放在已有 UniApp 项目根目录，执行以下命令。升级时使用新版本的文件名。
+
+```sh
+npm exec --offline --yes --package=./nova-pocket-module-0.1.0.tgz -- install-nova-pocket .
+```
+
+安装命令只替换 `src/uni_modules/nova-pocket/`。首次接入在宿主配置品牌、适配器和账户页面，保留自己的登录页、会员存储、底栏及构建入口。山岚步道使用同一模块的公开入口，旧版的资料与消息链接通过宿主转发页继续生效。[模块接线清单](module/README.md) · [山岚步道示例](examples/embedded/standalone.md)
+
+仓库内运行 `npm run pack:module`、`npx playwright-core install --only-shell chromium` 和 `npm run check:module-upgrade` 可重跑升级验收。脚本在临时宿主中依次安装两个实际版本包，分别构建 H5 和微信小程序，并核对宿主文件。浏览器用同一来源从旧版切到新版，验证昵称、提醒偏好、已加入的行程和登录回跳。默认旧包是仓库保存的首个本地候选版；也可在命令后加 `-- <旧包路径> <新包路径>`。[升级脚本](scripts/check-module-upgrade.js)
+
 ### 分发项目创建器
 
 在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、三种模板和各自的使用说明打成一个版本包，输出在 `dist/creator/`。
@@ -173,7 +185,7 @@ import { request } from './my-request.js' // 接入方自己的请求函数
 export const { auth, messages } = createHttpAdapters(request)
 ```
 
-自写适配器时，可在 `export const auth = { ... }` 上方加 `/** @satisfies {import('#pocket/types').AuthAdapter} */`，在消息适配器上使用 `MessageAdapter`。前者提示会话用户、表单参数与可选能力，后者区分完整列表与分页接口。示例既支持同步返回，也支持 Promise。已有宿主可以复制类型文件，用相对于适配器的路径引用它。[类型声明](src/pocket-types.d.ts) · [山岚步道适配器](examples/embedded/src/adapters/index.js)
+自写适配器时，可在 `export const auth = { ... }` 上方加 `/** @satisfies {import('#pocket/types').AuthAdapter} */`，在消息适配器上使用 `MessageAdapter`。前者提示会话用户、表单参数与可选能力，后者区分完整列表与分页接口。示例既支持同步返回，也支持 Promise。模块宿主可将该别名映射到模块里的类型文件，或直接用相对路径引用。[类型声明](src/pocket-types.d.ts) · [山岚步道适配器](examples/embedded/src/adapters/index.js)
 
 请求函数签名为 `request(method, path, body?)`，负责 API 地址、平台凭据和错误转换，成功时返回解包后的数据，失败时抛出带可展示消息的 `Error`，并保留 HTTP 状态码 `statusCode`、`status` 或 `response.status`。示例路径集中在 `src/adapters/http.js`。方法可以同步返回或返回 Promise。
 

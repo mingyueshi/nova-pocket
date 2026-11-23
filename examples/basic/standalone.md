@@ -37,3 +37,5 @@ npm run build:mp-weixin
 浏览器验收会在临时端口打开 H5 生产包，检查品牌、登录、昵称和消息已读。H5 产物在 `dist/build/h5/`。将 `dist/build/mp-weixin/` 导入微信开发者工具即可检查小程序，真机预览时使用自己的 AppID。
 
 源码按 [MIT 许可证](LICENSE) 分发，署名 mingyueshi。分发图标时请保留 [Lucide 图标许可证](src/static/icons/LICENSE.txt)。
+
+H5 开发服务默认仅供本机同源访问。构建工具的版本约束和剩余公告见[依赖安全说明](docs/dependency-security.md)。

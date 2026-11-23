@@ -11,7 +11,7 @@ export async function writeProject(output, template) {
   const readingRoom = template === 'reading-room'
   const embedded = template === 'embedded'
   await mkdir(output, { recursive: true })
-  const shared = ['scripts/sync-icons.js', 'docs/mobile-acceptance.md', 'eslint.config.js', '.gitignore', 'LICENSE']
+  const shared = ['scripts/sync-icons.js', 'docs/mobile-acceptance.md', 'docs/dependency-security.md', 'eslint.config.js', '.gitignore', 'LICENSE']
   if (!embedded) shared.push('src', 'scripts/uni.js', 'scripts/theme-icons.js', 'index.html', 'vite.config.js')
   for (const path of shared) {
     await cp(join(root, path), join(output, path), { recursive: true })

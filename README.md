@@ -73,7 +73,7 @@ npm run pack:creator
 把生成的 `.tgz` 交给下游开发者。对方将它放在自己的工作目录，按实际文件名运行以下命令即可创建项目。创建器从本地包读取模板，应用依赖随后由 `npm ci` 安装。
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.1.tgz -- create-nova-pocket ./my-account --template basic
+npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.2.tgz -- create-nova-pocket ./my-account --template basic
 cd my-account
 npm ci
 ```
@@ -237,6 +237,8 @@ export const { auth, messages } = createHttpAdapters(request)
 小程序页面路径以 `/pages/account/detail` 开头。内置演示共用一个虚构账号，其昵称、登录或退出状态和消息已读记录保存在本机，演示登录有效期为 7 天。密码与验证码仅用于当前表单和校验。可以在「我的 → 演示设置」重置演示数据。订单评价仍按本次运行保存。
 
 ## 校验
+
+当前锁文件的修复项、剩余高危告警的适用场景和模板升级步骤见[依赖安全说明](docs/dependency-security.md)。
 
 ```bash
 npm run lint

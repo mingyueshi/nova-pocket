@@ -34,3 +34,5 @@ npm exec --offline --yes --package=./nova-pocket-module-0.1.1.tgz -- install-nov
 从旧版复制式示例迁移时，先安装模块，参照上述宿主文件替换导入、页面注册和 Vite 配置。启动脚本使用宿主自己的 UniApp CLI；保留原会员存储键、业务页和分享转发页。完成上面四项交互验收后即可移除已无引用的旧副本。
 
 `src/uni_modules/nova-pocket/README.md` 提供接线清单和类型说明。项目与模块采用 MIT 许可，图标许可位于模块的 `static/icons/LICENSE.txt`。
+
+H5 开发服务默认仅供本机同源访问。构建工具的版本约束和剩余公告见[依赖安全说明](docs/dependency-security.md)。

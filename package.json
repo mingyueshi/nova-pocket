@@ -1,6 +1,6 @@
 {
   "name": "nova-pocket",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0-rc.2",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -43,5 +43,19 @@
   },
   "engines": {
     "node": "^22.13.0 || >=24.0.0"
+  },
+  "overrides": {
+    "@babel/core": "7.29.13",
+    "@intlify/core-base@9.1.9": "9.1.11",
+    "@intlify/message-resolver": "9.1.11",
+    "@jimp/jpeg@0.10.3": {
+      "jpeg-js": "0.4.4"
+    },
+    "adm-zip@0.5.16": "0.6.1",
+    "express@4.20.0": "4.22.3",
+    "postcss-selector-parser@6.1.2": "6.1.6",
+    "postcss@8.5.6": "8.5.33",
+    "source-map-js@1.2.1": "1.2.4",
+    "ws@8.18.0": "8.23.0"
   }
 }

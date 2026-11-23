@@ -55,3 +55,5 @@ H5 产物在 `dist/build/h5/`。浏览器验收会在临时端口启动自己的
 ## 许可
 
 项目源码使用 [MIT 许可证](LICENSE)，署名为 mingyueshi。分发图标时请一并保留 [Lucide 图标许可证](src/static/icons/LICENSE.txt)。
+
+H5 开发服务默认仅供本机同源访问。构建工具的版本约束和剩余公告见[依赖安全说明](docs/dependency-security.md)。

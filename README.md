@@ -3,6 +3,12 @@
 基于 UniApp + Vue 3 的通用移动端用户中心。项目从公开演示 v7 整理而来。
 https://nova-pocket-account-demo.mingyueshi.chatgpt.site/
 
+## 下载候选附件
+
+在 [GitHub Actions](https://github.com/mingyueshi/nova-pocket/actions/workflows/ci.yml) 选择对应提交且验收通过的运行，下载 `nova-pocket-candidate-<完整提交号>`。解压后先按附件 README 校验 `SHA256SUMS`。新建项目使用创建器，已有 UniApp 宿主使用独立模块安装包。两者独立编号，候选附件文件名含提交号；`candidate.json` 记录各自的版本、SHA-256 和主要变化。
+
+在仓库运行 `npm run pack:candidate` 可为当前 Git 提交生成同样结构的 `dist/candidates/<完整提交号>/`。打包读取该提交归档的文件。目录中包含两个安装包、使用说明、清单及升级验收所用的旧版模块。下游只需附件就能验证三种模板，并在山岚步道宿主中复核首次安装与跨版本升级。
+
 ## 快速启动
 
 使用 Node.js 22.13+（22.x）或 24 及以上版本，在 nova-pocket 目录执行以下命令。
@@ -67,7 +73,7 @@ npm run pack:creator
 把生成的 `.tgz` 交给下游开发者。对方将它放在自己的工作目录，按实际文件名运行以下命令即可创建项目。创建器从本地包读取模板，应用依赖随后由 `npm ci` 安装。
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.2.0.tgz -- create-nova-pocket ./my-account --template basic
+npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.1.tgz -- create-nova-pocket ./my-account --template basic
 cd my-account
 npm ci
 ```

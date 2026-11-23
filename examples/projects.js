@@ -21,7 +21,7 @@ export async function writeProject(output, template) {
   if (readingRoom) files.push('vite.config.js', 'server.js')
   if (embedded) {
     await writePocketModule(join(output, 'src/uni_modules/nova-pocket'))
-    files.push('index.html', 'vite.config.js')
+    files.push('index.html', 'vite.config.js', 'check-module-upgrade.js')
   }
   for (const path of files) {
     await cp(join(example, path), join(output, path), { recursive: true })
@@ -40,6 +40,8 @@ export async function writeProject(output, template) {
     lint: 'eslint src scripts check-h5.js vite.config.js' + (template === 'basic' ? ' check-mobile.js' : '') + (readingRoom ? ' server.js' : ''),
   }
   if (embedded) {
+    pkg.scripts['check:module-upgrade'] = 'node check-module-upgrade.js'
+    pkg.scripts.lint += ' check-module-upgrade.js'
     pkg.imports = { '#pocket/types': { types: './src/uni_modules/nova-pocket/pocket-types.d.ts' } }
   }
   pkg.scripts['icons:check'] = scripts['icons:check'] + (embedded ? ' --module' : '')

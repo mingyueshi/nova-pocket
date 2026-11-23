@@ -24,9 +24,6 @@ jobs:
       - run: npm run icons:check
       - run: npm run build:h5
       - run: npm run build:mp-weixin
-      - run: npm run pack:module
-      - run: npx --no-install playwright-core install --with-deps --only-shell chromium
-      - run: npm run check:module-upgrade
   pack:
     runs-on: ubuntu-latest
     outputs:
@@ -40,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-      - run: npm run pack:creator
+      - run: npm run pack:candidate
       - name: Record expected contents from the source template
         id: reference
         run: |
@@ -63,8 +60,8 @@ jobs:
           done
       - uses: actions/upload-artifact@v7
         with:
-          name: nova-pocket-creator
-          path: dist/creator/*.tgz
+          name: nova-pocket-candidate-${{ github.sha }}
+          path: dist/candidates/${{ github.sha }}/
           if-no-files-found: error
   standalone:
     needs: pack
@@ -92,7 +89,7 @@ jobs:
           package-manager-cache: false
       - uses: actions/download-artifact@v8
         with:
-          name: nova-pocket-creator
+          name: nova-pocket-candidate-${{ github.sha }}
           path: ${{ runner.temp }}/consumer
       - name: Create from the local tarball and protect downstream edits
         working-directory: ${{ runner.temp }}/consumer
@@ -100,12 +97,21 @@ jobs:
           REFERENCE_CHECKSUMS: ${{ needs.pack.outputs[matrix.template] }}
           npm_config_cache: ${{ runner.temp }}/creator-cache
         run: |
-          packages=(./create-nova-pocket-*.tgz)
-          test "${#packages[@]}" -eq 1
-          test -f "${packages[0]}"
-          tar -xOzf "${packages[0]}" package/README.md > creator-readme
+          sha256sum -c SHA256SUMS
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import { createHash } from 'node:crypto'
+          import { readFileSync } from 'node:fs'
+          const manifest = JSON.parse(readFileSync('candidate.json', 'utf8'))
+          assert.equal(manifest.commit, process.env.GITHUB_SHA)
+          for (const artifact of [...Object.values(manifest.packages), manifest.upgradeBaseline]) {
+            assert.equal(createHash('sha256').update(readFileSync(artifact.file)).digest('hex'), artifact.sha256)
+          }
+          JS
+          creator=./$(node -p "require('./candidate.json').packages.creator.file")
+          tar -xOzf "$creator" package/README.md > creator-readme
           grep -F 'npm exec --offline' creator-readme
-          create=(npm exec --offline --yes --package="${packages[0]}" -- create-nova-pocket)
+          create=(npm exec --offline --yes --package="$creator" -- create-nova-pocket)
           "${create[@]}" ./project --template "$TEMPLATE"
           (cd project && printf '%s\n' "$REFERENCE_CHECKSUMS" | sha256sum -c -)
           if [[ "$TEMPLATE" == reading-room ]]; then
@@ -184,3 +190,10 @@ jobs:
           test ! -e components/ServiceStats.wxml
           test ! -e components/ServiceOrders.wxml
           test ! -e components/ServiceReviews.wxml
+      - name: Install and upgrade the downloaded module in a disposable host
+        if: matrix.template == 'embedded'
+        working-directory: ${{ runner.temp }}/consumer/project
+        run: |
+          older=$(node -p "require('../candidate.json').upgradeBaseline.file")
+          newer=$(node -p "require('../candidate.json').packages.module.file")
+          npm run check:module-upgrade -- "../$older" "../$newer"

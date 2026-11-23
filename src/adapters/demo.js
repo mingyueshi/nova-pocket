@@ -1,6 +1,7 @@
 import { notifications, pageSize } from './demo-messages.js'
 
 const demoUser = () => ({ id: 'demo', nickname: '演示用户', mode: 'member' })
+const messageIds = new Set(notifications.map(item => item.id))
 const initiallyRead = notifications.filter(item => item.read).map(item => item.id)
 const sessionDuration = 7 * 24 * 60 * 60 * 1000
 
@@ -22,7 +23,7 @@ export function createDemoAdapters(storage) {
       user = { ...saved.user }
       guest = saved.guest
       expiresAt = saved.expiresAt
-      read = new Set([...initiallyRead, ...saved.read])
+      read = new Set([...initiallyRead, ...saved.read.filter(id => messageIds.has(id))])
     }
     if (!guest && Date.now() >= expiresAt) {
       const error = new Error('登录已过期，请重新登录')
@@ -108,8 +109,12 @@ export function createDemoAdapters(storage) {
         return { items, nextCursor, unreadCount: all.filter(item => !item.read).length }
       },
       get: id => list().find(item => item.id === id) || null,
-      markRead(ids) { checkSession(); for (const id of ids) read.add(id); persist() },
-      markAllRead() { checkSession(); read = new Set(notifications.map(item => item.id)); persist() },
+      markRead(ids) {
+        checkSession()
+        for (const id of ids) if (messageIds.has(id)) read.add(id)
+        persist()
+      },
+      markAllRead() { checkSession(); read = new Set(messageIds); persist() },
       reset() { read = new Set(initiallyRead); persist() },
     },
   }

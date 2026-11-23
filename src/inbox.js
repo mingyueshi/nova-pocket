@@ -10,7 +10,9 @@ export function createInbox(messages, onError) {
   let current
 
   function reset(enabled) {
-    current = enabled ? { queue: Promise.resolve(), details: new Map(), cursors: new Set() } : null
+    current = enabled ? {
+      queue: Promise.resolve(), details: new Map(), freshDetails: new Set(), confirmedRead: new Set(), cursors: new Set(),
+    } : null
     Object.assign(inbox, empty())
   }
 
@@ -56,17 +58,28 @@ export function createInbox(messages, onError) {
       const unreadCount = messages.listPage ? page.unreadCount : items.filter(item => !item.read).length
       if (!Number.isSafeInteger(unreadCount) || unreadCount < 0) throw new Error('未读数量无效')
       const merged = new Map(more ? inbox.items.map(item => [item.id, item]) : [])
+      const staleReads = new Set()
       for (const item of items) {
         if (!item || typeof item.id !== 'string' || !item.id) throw new Error('消息缺少有效 ID')
-        merged.set(item.id, { ...item })
+        const confirmed = ctx.confirmedRead.has(item.id)
+        if (confirmed && !item.read) staleReads.add(item.id)
+        else staleReads.delete(item.id)
+        merged.set(item.id, confirmed ? { ...item, read: true } : { ...item })
       }
       for (const item of items) {
         const detail = ctx.details.get(item.id)
-        if (detail) Object.assign(detail, item)
+        if (detail) Object.assign(detail, merged.get(item.id))
       }
-      if (!more) ctx.cursors.clear()
+      if (!more) {
+        ctx.cursors.clear()
+        ctx.freshDetails.clear()
+      }
       if (nextCursor !== null) ctx.cursors.add(nextCursor)
-      Object.assign(inbox, { items: [...merged.values()], unreadCount, nextCursor, status: 'ready', moreStatus: 'idle', moreError: '' })
+      // The page total includes the unread entries in its own snapshot.
+      Object.assign(inbox, {
+        items: [...merged.values()], unreadCount: Math.max(0, unreadCount - staleReads.size),
+        nextCursor, status: 'ready', moreStatus: 'idle', moreError: '',
+      })
     }).catch(error => {
       if (ctx !== current) return
       if (more) Object.assign(inbox, { moreStatus: 'error', moreError: error.message || '加载下一页失败' })
@@ -85,16 +98,24 @@ export function createInbox(messages, onError) {
       return inbox.items.find(item => item.id === id) || null
     }
     return enqueue(ctx, async () => {
+      if (ctx.freshDetails.has(id)) return ctx.details.get(id)
       const item = await messages.get(id)
-      if (ctx !== current || !item) return null
-      if (item.id !== id) throw new Error('消息详情 ID 不匹配')
-      const listed = inbox.items.find(row => row.id === id)
-      if (listed && Boolean(listed.read) !== Boolean(item.read)) {
-        inbox.unreadCount = Math.max(0, inbox.unreadCount + (item.read ? -1 : 1))
-        listed.read = item.read
+      if (ctx !== current) return null
+      if (!item) {
+        ctx.details.delete(id)
+        return null
       }
-      const detail = reactive({ ...item })
+      if (item.id !== id) throw new Error('消息详情 ID 不匹配')
+      const read = ctx.confirmedRead.has(id) || item.read
+      const listed = inbox.items.find(row => row.id === id)
+      if (listed && Boolean(listed.read) !== Boolean(read)) {
+        inbox.unreadCount = Math.max(0, inbox.unreadCount + (read ? -1 : 1))
+        listed.read = read
+      }
+      const detail = ctx.details.get(id) ?? reactive({})
+      Object.assign(detail, item, { read })
       ctx.details.set(id, detail)
+      ctx.freshDetails.add(id)
       return detail
     })
   }
@@ -112,9 +133,10 @@ export function createInbox(messages, onError) {
       if (!bulk && !pending.length) return
       const result = bulk ? await messages.markAllRead() : await messages.markRead(pending)
       if (ctx !== current) return
-      const changed = new Set(pending)
+      const changed = new Set(all ? targets : pending)
+      for (const id of changed) ctx.confirmedRead.add(id)
       for (const item of [...inbox.items, ...ctx.details.values()]) {
-        if (all || changed.has(item.id)) item.read = true
+        if (changed.has(item.id)) item.read = true
       }
       inbox.unreadCount = Number.isSafeInteger(result?.unreadCount) && result.unreadCount >= 0
         ? result.unreadCount : all ? 0 : Math.max(0, inbox.unreadCount - pending.length)

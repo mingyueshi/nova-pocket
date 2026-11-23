@@ -9,10 +9,11 @@ export async function writeProject(output, template) {
   const example = join(examples, template)
   const readingRoom = template === 'reading-room'
   await mkdir(output, { recursive: true })
-  for (const path of ['src', 'scripts/uni.js', 'scripts/sync-icons.js', 'index.html', 'vite.config.js', 'eslint.config.js', '.gitignore', 'LICENSE']) {
+  for (const path of ['src', 'docs/mobile-acceptance.md', 'scripts/uni.js', 'scripts/theme-icons.js', 'scripts/sync-icons.js', 'index.html', 'vite.config.js', 'eslint.config.js', '.gitignore', 'LICENSE']) {
     await cp(join(root, path), join(output, path), { recursive: true })
   }
   const files = ['src', 'check-h5.js']
+  if (template === 'basic') files.push('check-mobile.js')
   if (readingRoom) files.push('vite.config.js', 'server.js')
   for (const path of files) {
     await cp(join(example, path), join(output, path), { recursive: true })
@@ -21,14 +22,14 @@ export async function writeProject(output, template) {
 
   const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
   const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'))
-  pkg.name = readingRoom ? 'qinghe-reading-room' : 'nova-pocket-basic'
+  pkg.name = readingRoom ? 'qinghe-reading-room' : 'nova-pocket-' + template
   const { scripts } = pkg
   pkg.scripts = {
     'dev:h5': scripts['dev:h5'],
     'build:h5': scripts['build:h5'],
     'build:mp-weixin': scripts['build:mp-weixin'],
     'check:h5': 'node check-h5.js',
-    lint: 'eslint src scripts check-h5.js vite.config.js' + (readingRoom ? ' server.js' : ''),
+    lint: 'eslint src scripts check-h5.js vite.config.js' + (template === 'basic' ? ' check-mobile.js' : '') + (readingRoom ? ' server.js' : ''),
     'icons:check': scripts['icons:check'],
     'icons:sync': scripts['icons:sync'],
   }

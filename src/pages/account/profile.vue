@@ -71,7 +71,7 @@ async function save() {
     <template #profile>
       <view v-if="guest" class="panel">
         <text class="profile-title">请先登录账号</text>
-        <button class="btn profile-action" @tap="authRoute('login', false, accountTarget('profile', '', tab))">去登录</button>
+        <button role="button" class="btn profile-action" @tap="authRoute('login', false, accountTarget('profile', '', tab))">去登录</button>
       </view>
       <view v-else class="panel profile">
         <text class="profile-title">展示昵称</text>
@@ -79,8 +79,8 @@ async function save() {
         <text v-if="error" class="error" role="alert">{{ error }}</text>
         <text class="note">请输入 1–20 个字符。不必填写真实资料。</text>
         <view class="profile-actions">
-          <button class="btn primary" :disabled="saving" @tap="save">保存资料</button>
-          <button class="btn" @tap="back">取消</button>
+          <button role="button" class="btn primary" :disabled="saving" @tap="save">保存资料</button>
+          <button role="button" class="btn" @tap="back">取消</button>
         </view>
       </view>
     </template>

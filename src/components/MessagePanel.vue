@@ -93,7 +93,7 @@ function refresh() {
     </view>
     <StatePanel v-else :title="inbox.nextCursor && inbox.unreadCount ? '当前页没有未读消息' : '没有未读消息'" />
     <text v-if="inbox.moreError" role="alert" class="note">{{ inbox.moreError }}</text>
-    <button v-if="inbox.nextCursor" class="btn outline" :disabled="inbox.moreStatus === 'loading'" @tap="account.loadMessages(true)">
+    <button role="button" v-if="inbox.nextCursor" class="btn outline" :disabled="inbox.moreStatus === 'loading'" @tap="account.loadMessages(true)">
       {{ inbox.moreStatus === 'loading' ? '正在加载…' : inbox.moreStatus === 'error' ? '重试加载下一页' : '加载更多' }}
     </button>
     <text v-if="readError" role="alert" class="note">{{ readError }}</text>

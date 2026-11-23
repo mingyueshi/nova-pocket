@@ -1,4 +1,5 @@
-export default {
+/** @satisfies {import('#pocket/types').PocketConfig} */
+const config = {
   brand: { name: 'Nova Pocket', subtitle: '账户中心', logo: '' },
   defaultTheme: 'blue',
   defaultLayout: 'overview',
@@ -8,9 +9,12 @@ export default {
     ['messages', '消息', 'bell'],
     ['mine', '我的', 'user-round'],
   ],
-  shortcuts: [
-    ['profile', '个人资料', 'user-round', '编辑展示昵称'],
-    ['messages', '消息中心', 'bell', '查看账户通知'],
-  ],
+  blocks: {
+    home: [{ type: 'identity', actions: false }],
+    mine: ['identity', { type: 'menu', title: '账户管理', entries: ['settings'] }],
+  },
+  shortcuts: [],
   modules: {},
 }
+
+export default config

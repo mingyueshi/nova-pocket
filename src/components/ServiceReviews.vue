@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import FilterTabs from './FilterTabs.vue'
+import { activeTheme } from '../state.js'
 import NovaIcon from './NovaIcon.vue'
 import { findServiceOrder, serviceDemo, serviceOrders } from '../service-demo.js'
 
@@ -47,7 +48,7 @@ function open(view, id) {
     <FilterTabs :options="options" :value="serviceDemo.reviewFilter" label="评价状态" @select="serviceDemo.reviewFilter = $event" />
     <button v-for="item in orders" :key="item.id" class="panel review-card" @click="open('review', item.id)">
       <view class="review-card-main">
-        <view class="review-mark"><NovaIcon name="sparkles" tone="blue" :size="19" /></view>
+        <view class="review-mark"><NovaIcon name="sparkles" :tone="activeTheme.iconAccent" :size="19" /></view>
         <view class="np-grow">
           <text class="review-name">{{ item.title }}</text>
           <text class="note review-meta">{{ item.kind }} · {{ item.date }}</text>

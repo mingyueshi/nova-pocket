@@ -7,4 +7,4 @@ export const { auth, messages } = createDemoAdapters({
   load: () => uni.getStorageSync(storageKey),
   save: snapshot => uni.setStorageSync(storageKey, snapshot),
 })
-export const demoSettingsEnabled = Boolean(config.demoSettings && auth.demo && messages.demo)
+export const demoSettingsEnabled = Boolean(config.demoSettings && auth.demo && messages?.demo)

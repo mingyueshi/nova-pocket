@@ -1,21 +1,23 @@
 import { computed, reactive } from 'vue'
 
+import { configuredThemes } from './themes.js'
 import config from './pocket.config.js'
 import { auth, messages, demoSettingsEnabled } from './adapters/index.js'
 import { createAccountData } from './account-data.js'
-import { authUrl, isTab } from './account-navigation.js'
+import { authUrl, viewNames } from './account-navigation.js'
 
-export const account = createAccountData(auth, messages, isTab('messages'))
+export const account = createAccountData(auth, messages, Boolean(viewNames.message))
 
 export const layouts = [['overview', '状态概览'], ['shortcuts', '快捷工作台'], ['minimal', '极简列表']]
 export const modes = [['member', '已登录'], ['guest', '访客'], ['incomplete', '资料待完善']]
-export const themes = [['blue', '经典蓝'], ['teal', '松绿'], ['dark', '深色']]
+const registry = configuredThemes(config)
+export const themes = Array.from(registry, ([key, theme]) => [key, theme.label])
 export const scenarios = [['normal', '正常'], ['empty', '空列表'], ['error', '加载失败']]
 
 function defaults() {
   return {
     layout: config.defaultLayout, theme: config.defaultTheme, scenario: 'normal',
-    notices: true, messageFilter: 'all',
+    messageFilter: 'all',
   }
 }
 
@@ -24,8 +26,9 @@ export const state = reactive({
   get mode() { return account.session.user ? (account.session.user.mode || 'member') : 'guest' },
   get nickname() { return account.session.user?.nickname || '' },
 })
-const themeColors = { blue: '#1d4ed8', teal: '#106552', dark: '#aec4ff' }
-export const themeColor = computed(() => themeColors[state.theme])
+export const activeTheme = computed(() => registry.get(state.theme))
+export const themeColor = computed(() => activeTheme.value.brand)
+export const mutedTone = computed(() => activeTheme.value.base === 'dark' ? 'light' : 'muted')
 
 export function reset() {
   if (!demoSettingsEnabled) return

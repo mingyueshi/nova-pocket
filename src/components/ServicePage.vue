@@ -1,7 +1,7 @@
 <script setup>
 import StatePanel from './StatePanel.vue'
-import { account, authRoute, state } from '../state.js'
-import { detailUrl, requiresLogin, returnToAccountHome, returnToServiceList, showAccountTab } from '../account-navigation.js'
+import { account, activeTheme, authRoute } from '../state.js'
+import { detailUrl, requiresLogin, returnToAccountHome, returnToServiceList, showAccountTab, viewNames } from '../account-navigation.js'
 
 const props = defineProps({ target: Object, shareable: Boolean })
 const { session } = account
@@ -19,7 +19,7 @@ function copyLink() {
 </script>
 
 <template>
-  <view class="surface service-page" :class="state.theme">
+  <view class="surface service-page" :class="activeTheme.base" :style="activeTheme.style">
     <view class="service-body np-stack">
       <StatePanel v-if="!target" title="页面不可用" action="返回账户中心" @action="returnToAccountHome" />
       <StatePanel v-else-if="session.status === 'idle' || session.status === 'loading'" title="正在加载账户…" />
@@ -38,7 +38,7 @@ function copyLink() {
         </view>
       </template>
       <button v-if="target?.id" class="link" @tap="returnToServiceList(target)">返回列表</button>
-      <button v-else-if="target" class="link" @tap="showAccountTab('services')">返回服务页</button>
+      <button v-else-if="target" class="link" @tap="showAccountTab(target.tab)">{{ target.tab === 'services' ? '返回服务页' : '返回' + viewNames[target.tab] }}</button>
     </view>
   </view>
 </template>

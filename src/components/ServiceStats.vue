@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { activeTheme } from '../state.js'
 import NovaIcon from './NovaIcon.vue'
 import { summarizeValues, trendLabels } from '../service-stats.js'
-import { state } from '../state.js'
 const spans=[['week','最近 7 天'],['month','最近 30 天']]
 const data=[
  {title:'访问次数',unit:'次',short:[12,18,14,22,16,26,20],prior:[6,8,9,4,7,9,5,8,7,5,6,7,9,10,13,5,12,10,12,8,6,9,12],summary:'进入账户中心的次数'},
@@ -24,7 +24,6 @@ const summary = computed(() => summarizeValues(values.value))
 const detail = computed(() => selected.value === null
   ? null
   : { label: labels.value[selected.value], val: values.value[selected.value] })
-const tone = computed(() => state.theme === 'dark' ? 'light' : 'blue')
 
 function setSpan(event) {
   span.value = Number(event.detail.value)
@@ -39,12 +38,12 @@ function setMetric(event) {
 <template>
 <view class="stats">
  <view class="panel summary">
-  <view class="stat-icon"><NovaIcon name="chart-no-axes-combined" :tone="tone" :size="23" /></view>
+  <view class="stat-icon"><NovaIcon name="chart-no-axes-combined" :tone="activeTheme.iconAccent" :size="23" /></view>
   <text class="metric">{{curr.title}}</text><text class="number">{{summary.total}}<text class="unit">{{curr.unit}}</text></text><text class="note">{{spans[span][1]}} · {{curr.summary}}</text>
  </view>
  <view class="picker-list">
-  <picker :range="spans.map(x=>x[1])" :value="span" @change="setSpan"><view class="pick"><text>统计区间</text><text>{{spans[span][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
-  <picker :range="data.map(x=>x.title)" :value="metric" @change="setMetric"><view class="pick"><text>选择指标</text><text>{{curr.title}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
+  <picker :range="spans.map(x=>x[1])" :value="span" @change="setSpan"><view class="pick"><text>统计区间</text><text>{{spans[span][1]}}</text><NovaIcon name="chevron-right" :tone="activeTheme.iconAccent" :size="15" /></view></picker>
+  <picker :range="data.map(x=>x.title)" :value="metric" @change="setMetric"><view class="pick"><text>选择指标</text><text>{{curr.title}}</text><NovaIcon name="chevron-right" :tone="activeTheme.iconAccent" :size="15" /></view></picker>
  </view>
  <view class="panel chart"><text class="metric">{{span?'按时间分段':'每日趋势'}}</text><text class="note chart-note">点任一条查看该时间段，图内以本区间最高值为比例。</text>
   <button v-for="(val,i) in values" :key="labels[i]" class="bar-row" role="button" tabindex="0" :aria-pressed="selected===i" :class="{selected:selected===i}" @tap="selected=i" @keydown.enter.prevent="selected=i" @keydown.space.prevent="selected=i">

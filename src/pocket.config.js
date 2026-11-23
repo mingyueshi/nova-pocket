@@ -1,4 +1,5 @@
-export default {
+/** @satisfies {import('#pocket/types').PocketConfig} */
+const config = {
   brand: {
     name: 'Nova Pocket',
     logo: '', // /static/brand.png，留空使用内置图标
@@ -26,3 +27,5 @@ export default {
     reviews: { enabled: true, label: '我的评价', icon: 'message-square-text', description: '查看评价记录，体验评分与评论流程' },
   },
 }
+
+export default config

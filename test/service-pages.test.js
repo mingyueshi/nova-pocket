@@ -60,3 +60,23 @@ test('extension configuration rejects conflicting keys, ambiguous pages and exte
   config.modules.other = { ...config.modules.holds }
   assert.throws(() => configuredServicePages(config), /重复/)
 })
+
+test('account menus, shortcuts and direct links expose only connected capabilities', () => {
+  const config = { tabs: [['mine', '我的']], shortcuts: [['profile'], ['messages'], ['security'], ['help']],
+    modules: {}, host: { accountTab: '/pages/club/mine' }, accountPages: { help: '/pages/club/help' } }
+  const auth = { getSession: () => null }
+  const minimal = createNavigation(config, false, { auth, messages: null })
+  assert.deepEqual(minimal.shortcuts, [['help']])
+  assert.deepEqual(Object.keys(minimal.viewNames).sort(), ['help', 'mine'])
+  assert.equal(minimal.isDetail('message'), false)
+  const connected = createNavigation(config, false, { auth: { ...auth, updateProfile() {}, logout() {} },
+    messages: { list() {}, markRead() {} } })
+  assert.deepEqual(connected.shortcuts, [['profile'], ['messages'], ['help']])
+  assert.equal(connected.isDetail('message'), true)
+  assert.equal(connected.isDetail('settings'), true)
+  assert.equal(connected.isDetail('security'), false)
+  const http = createNavigation({ ...config, host: undefined, tabs: [['services'], ['mine']],
+    modules: { stats: { enabled: true } } }, false, { auth, messages: null })
+  assert.equal(http.isDetail('stats'), false)
+  assert.equal(http.isTab('services'), false)
+})

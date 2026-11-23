@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import config from './pocket.config.js'
-import { demoSettingsEnabled } from './adapters/index.js'
+import { auth, messages, demoSettingsEnabled } from './adapters/index.js'
 import { configuredServicePages, serviceRoot } from './service-pages.js'
 
 const tabKeys = ['home', 'services', 'messages', 'mine']
@@ -10,13 +10,21 @@ const indexPath = 'pages/index/index'
 const profilePath = '/pages/account/profile'
 export const detailPath = '/pages/account/detail'
 
-export function createNavigation(settings, showDemo) {
+const optionalPages = { security: '账户安全', activity: '最近活动', notifications: '通知偏好', privacy: '隐私说明', help: '帮助与反馈' }
+export const host = config.host
+
+export function createNavigation(settings, showDemo, adapters = { auth, messages }) {
+  const demoServices = Boolean(adapters.auth.demo && adapters.messages?.demo)
+  const inbox = adapters.messages
+  const hasInbox = Boolean(inbox?.markRead && (inbox.listPage ? inbox.get && inbox.markAllRead : inbox.list))
+  const linkedPages = settings.accountPages || {}
+  const hasProfile = typeof adapters.auth.updateProfile === 'function'
   const servicePages = configuredServicePages(settings)
   const serviceTab = settings.tabs.some(([key]) => key === 'services')
   const services = Object.entries(settings.modules)
-    .filter(([, module]) => serviceTab && module.enabled)
+    .filter(([key, module]) => serviceTab && module.enabled && (servicePages.has(key) || (demoServices && ['orders', 'reviews', 'stats'].includes(key))))
     .map(([key, module]) => [key, module.label, module.icon, module.description])
-  const tabs = settings.tabs.filter(([key]) => tabKeys.includes(key) && (key !== 'services' || services.length))
+  const tabs = settings.tabs.filter(([key]) => tabKeys.includes(key) && (key !== 'messages' || hasInbox) && (key !== 'services' || services.length))
   if (!tabs.length) throw new Error('pocket.config.js 至少需要一个可用的底栏入口')
   const firstTab = tabs[0][0]
   const isTab = tab => tabs.some(([key]) => key === tab)
@@ -24,12 +32,14 @@ export function createNavigation(settings, showDemo) {
   const viewNames = {
     ...Object.fromEntries(tabs.map(([key, label]) => [key, label])),
     ...Object.fromEntries(services.map(([key, label]) => [key, label])),
-    profile: '个人资料', security: '账户安全', settings: '账户设置',
-    activity: '最近活动', privacy: '隐私说明', help: '帮助与反馈',
+    ...(hasProfile && { profile: '个人资料' }),
+    ...Object.fromEntries(Object.entries(optionalPages).filter(([key]) => linkedPages[key] || (showDemo && key !== 'notifications'))),
+    ...((!settings.host || adapters.auth.logout || linkedPages.notifications || linkedPages.privacy) && { settings: '账户设置' }),
   }
   if (serviceKeys.has('orders')) viewNames.order = '订单详情'
   if (serviceKeys.has('reviews')) viewNames.review = '评价详情'
-  if (isTab('messages')) viewNames.message = '消息详情'
+  if (settings.host && hasInbox) viewNames.messages = '消息中心'
+  if (isTab('messages') || (settings.host && hasInbox)) viewNames.message = '消息详情'
   if (showDemo) viewNames.demo = '演示设置'
 
   function isDetail(view) {
@@ -67,7 +77,7 @@ export function createNavigation(settings, showDemo) {
     for (const [key, file] of servicePages) if (path === serviceRoot + '/' + file) return key
   }
 
-  const shortcuts = settings.shortcuts.filter(([key]) => isTab(key) || isDetail(key) || key === 'profile')
+  const shortcuts = settings.shortcuts.filter(([key]) => isTab(key) || isDetail(key) || (key === 'profile' && hasProfile))
   return { tabs, services, firstTab, viewNames, shortcuts, isTab, isDetail, requiresLogin, detailTab, detailUrl, serviceUrl, serviceViewForPath }
 }
 
@@ -81,7 +91,7 @@ function indexUrl(tab) {
 
 // Only reconstruct registered account screens. No arbitrary URL is accepted from an auth query.
 export function accountTarget(view, id, tab) {
-  if (!isTab(view) && !isDetail(view) && view !== 'profile') return null
+  if (typeof view !== 'string' || !Object.prototype.hasOwnProperty.call(viewNames, view)) return null
   return { view, id: typeof id === 'string' ? id : '', tab: isTab(view) ? view : detailTab(view, tab) }
 }
 
@@ -98,13 +108,14 @@ export function pageRecordId(value, platform = process.env.UNI_PLATFORM) {
 }
 
 export function targetUrl(target) {
-  if (isTab(target.view)) return indexUrl(target.view)
+  if (isTab(target.view)) return host?.accountTab || indexUrl(target.view)
+  if (Object.prototype.hasOwnProperty.call(config.accountPages || {}, target.view)) return config.accountPages[target.view]
   if (target.view === 'profile') return profilePath + '?tab=' + target.tab
   return serviceUrl(target.view, target.id, target.tab) || detailUrl(target.view, target.id, target.tab)
 }
 
 export function authUrl(kind, target) {
-  const path = '/pages/auth/' + kind
+  const path = host?.loginPage || '/pages/auth/' + kind
   if (!target) return path
   const query = ['returnView=' + encodeURIComponent(target.view), 'returnTab=' + encodeURIComponent(target.tab)]
   if (target.id) query.push('returnId=' + encodeURIComponent(target.id))
@@ -113,6 +124,9 @@ export function authUrl(kind, target) {
 
 function previousAccountTarget(page) {
   const query = page.options || page.$page?.options || {}
+  if (host && '/' + page.route === host.accountTab) return accountTarget(firstTab)
+  const linked = Object.entries(config.accountPages || {}).find(([, path]) => path === '/' + page.route)
+  if (linked) return accountTarget(linked[0])
   if (page.route === indexPath) return accountTarget(rootTab.value)
   if ('/' + page.route === profilePath) return accountTarget('profile', '', query.tab)
   if ('/' + page.route === detailPath) return accountTarget(query.view, pageRecordId(query.id), query.tab)
@@ -122,14 +136,16 @@ function previousAccountTarget(page) {
 export function leaveAuthPages(target = null) {
   const pages = getCurrentPages()
   let previous = pages.length - 2
-  while (previous >= 0 && pages[previous].route?.startsWith('pages/auth/')) previous--
+  while (!host && previous >= 0 && pages[previous].route?.startsWith('pages/auth/')) previous--
   if (previous >= 0) {
     const origin = previousAccountTarget(pages[previous])
     if (!target || (origin && targetUrl(origin) === targetUrl(target))) {
       return uni.navigateBack({ delta: pages.length - previous - 1 })
     }
+    if (host && isTab(target.view)) return returnToAccountHome()
     if (pages.length - previous === 2) return uni.redirectTo({ url: targetUrl(target) })
   }
+  if (host && (!target || isTab(target.view))) return returnToAccountHome()
   return uni.reLaunch({ url: target ? targetUrl(target) : indexUrl(firstTab) })
 }
 
@@ -143,15 +159,18 @@ export function returnToServiceList(target) {
 }
 
 export function returnToAccountHome() {
+  if (host) return uni.switchTab({ url: host.accountTab })
   return uni.reLaunch({ url: indexUrl(firstTab) })
 }
 
 export function openAccountView(view, id, tab) {
-  if (view !== 'profile' && !isDetail(view)) return showAccountTab(firstTab)
-  return uni.navigateTo({ url: targetUrl(accountTarget(view, id, tab)) })
+  const target = accountTarget(view, id, tab)
+  if (!target || isTab(view)) return showAccountTab(firstTab)
+  return uni.navigateTo({ url: targetUrl(target) })
 }
 
 export function showAccountTab(tab) {
+  if (host) return returnToAccountHome()
   if (!isTab(tab)) tab = firstTab
   const pages = getCurrentPages()
   const index = pages.map(page => page.route).lastIndexOf(indexPath)

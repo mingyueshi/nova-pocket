@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 import { preview } from 'vite'
+import { checkMobile } from './check-mobile.js'
 import config from './src/pocket.config.js'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -24,7 +25,14 @@ try {
   await label(config.brand.name).waitFor()
   await tab('消息，2 条未读通知').waitFor()
   assert.equal(await screen.getByRole('navigation').getByRole('button').count(), 3)
+  await label('演示用户').waitFor()
+  assert.doesNotMatch(await screen.innerText(), /快捷入口|个人资料|编辑资料|账户设置|账户管理/)
+  assert.equal(await label('消息').count(), 1)
   await tab('我的').click()
+  await label('编辑资料').waitFor()
+  assert.equal(await label('编辑资料').count(), 1)
+  assert.equal(await label('个人资料').count(), 0)
+  assert.equal(await label('账户设置').count(), 1)
   await button('账户设置').click()
   await button('退出登录').click()
   await page.getByText('退出', { exact: true }).last().click()
@@ -53,6 +61,7 @@ try {
   await tab('消息，1 条未读通知').click()
   await notification.getByText('已读', { exact: true }).waitFor()
   assert.deepEqual(errors, [])
+  await checkMobile('http://127.0.0.1:' + site.httpServer.address().port)
   console.log('H5 验收通过：品牌、本地登录、昵称保存和消息已读。')
 } catch (error) {
   if (page) console.error(page.url(), await page.locator('body').innerText())

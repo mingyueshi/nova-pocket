@@ -5,6 +5,7 @@ import { getCurrentInstance, watch } from 'vue'
 import { detailPath } from '../../account-navigation.js'
 // #endif
 import { onAddToFavorites, onHide, onLoad, onReady, onShareAppMessage, onShow, onUnload } from '@dcloudio/uni-app'
+import config from '../../pocket.config.js'
 import AccountScreen from '../../components/AccountScreen.vue'
 import {
   backFromAccountView, detailTab, detailUrl, isDetail, pageRecordId, serviceUrl, showAccountTab, viewNames,
@@ -12,10 +13,11 @@ import {
 
 const detail = ref({ route: '', recordId: '', tab: 'home' })
 const title = computed(() => viewNames[detail.value.route] || '页面未找到')
-const destination = computed(() => serviceUrl(detail.value.route, detail.value.recordId, detail.value.tab))
+const destination = computed(() => config.accountPages?.[detail.value.route] || serviceUrl(detail.value.route, detail.value.recordId, detail.value.tab))
 let ready = false
 // #ifdef H5
 const instance = getCurrentInstance().proxy
+let loadedPath
 // #endif
 
 function forward() {
@@ -31,6 +33,7 @@ function forward() {
 function loadDetail(query) {
   const route = typeof query?.view === 'string' && isDetail(query.view) ? query.view : ''
   // #ifdef H5
+  loadedPath = instance.$route.fullPath
   // A public service URL is encoded once. Vue Router has already decoded it.
   if (serviceUrl(route)) query = instance.$route.query
   // #endif
@@ -54,7 +57,7 @@ onUnload(() => { visible.value = false })
 // #ifdef H5
 // A pasted hash URL can change the query without creating another UniApp page instance.
 watch(() => instance.$route.fullPath, () => {
-  if (!visible.value || instance.$route.path !== detailPath) return
+  if (!visible.value || instance.$route.path !== detailPath || instance.$route.fullPath === loadedPath) return
   loadDetail(instance.$route.query)
 }, { flush: 'post' })
 // #endif

@@ -23,17 +23,23 @@ H5 通过 Vite 将同源的 `/api` 请求转发到 `127.0.0.1:4318`。示例 API
 
 打开 [品牌与导航配置](src/pocket.config.js)，将 `brand.name` 从「青禾书房」改为自己的名称，例如「溪桥阅览室」。`brand.subtitle` 控制 H5 标题的副标题。自定义 Logo 放在 `src/static/` 中，将 `brand.logo` 设为对应的 `/static/文件名`。重新启动 API 和 H5 开发服务，或重新构建，首页和页面标题会使用新名称。
 
+同一文件的 `themes.tea` 是「书房茶褐」。`brand` 控制底栏选中文字与身份卡按钮文字，`iconAccent` 控制借阅和选中底栏图标，`hero` 与 `heroStyle` 控制身份卡底色和纯色／渐变样式。修改六位十六进制颜色后，重新运行开发或构建命令即可同步两端。进入「我的 → 账户设置 → 外观」能在内置深色和书房主题间切换。把 `defaultTheme` 拼成未注册的键，两端构建都会指出该字段。[可用字段与适配器签名](src/pocket-types.d.ts)
+
+首页的 `blocks.home` 将 `loans` 菜单放在身份卡之前。「我的」的顺序可独立调整。
+
 ## 两位读者打开同一条分享链接
 
 两位读者均可使用演示密码 `ReadingDemo2026`。
 
-1. 从「服务 → 我的借阅」进入，以青禾（`reader@example.test`）登录，打开《山川笔记》。应还日期为 2026-12-10。H5 点「复制详情链接」，微信点「分享详情」。
+1. 从首页第一组「借阅服务 → 我的借阅」进入，以青禾（`reader@example.test`）登录，打开《山川笔记》。应还日期为 2026-12-10。H5 点「复制详情链接」，微信点「分享详情」。
 2. 在访客会话打开该链接，以青禾登录后会回到同一笔记录。
 3. 从「我的 → 账户设置」退出，重新打开同一条链接，以小林（`lin@example.test`）登录。页面显示「借阅记录不可用」，点「返回列表」只会看到小林的《河岸手记》。
 
 借阅页面在 [我的借阅](src/pocket-services/loans/index.vue)。示例 API 通过会话令牌确定当前读者，`GET /api/loans` 返回此人的借阅列表，`GET /api/loans/{id}` 返回一条记录。记录不存在或属于其他读者时均返回 404。
 
 ## 构建和验收
+
+生成项目中的 [移动端验收](docs/mobile-acceptance.md) 列出窄屏、键盘、系统返回和真机复测的操作与通过条件。
 
 ```sh
 npm run build:h5
@@ -44,7 +50,7 @@ npm run build:mp-weixin
 
 H5 产物在 `dist/build/h5/`。浏览器验收会在临时端口启动自己的 API 和预览服务，检查当前品牌、分享回跳、账号隔离和异常状态。Linux CI 安装浏览器时可以加 `--with-deps`。
 
-将 `dist/build/mp-weixin/` 导入微信开发者工具，运行 `npm run api` 后可在本机模拟器中验证借阅流程。连接自己的后端时，在项目根目录的 `.env.local` 设置 `VITE_API_BASE_URL` 并重新构建。微信真机使用设备可达的 HTTPS 地址，并配置自己的 AppID 和合法请求域名。
+将 `dist/build/mp-weixin/` 导入微信开发者工具，运行 `npm run api` 后可在本机模拟器中验证借阅流程。模拟器访问示例的本机 HTTP 接口时，在该测试项目的本地设置中勾选「不校验合法域名」。连接自己的后端时，在项目根目录的 `.env.local` 设置 `VITE_API_BASE_URL` 并重新构建。微信真机使用设备可达的 HTTPS 地址，并配置自己的 AppID 和合法请求域名。
 
 ## 许可
 

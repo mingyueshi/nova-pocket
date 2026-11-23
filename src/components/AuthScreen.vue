@@ -4,7 +4,10 @@ import NovaIcon from './NovaIcon.vue'
 import { useHeaderPadding } from '../use-header-padding.js'
 import config from '../pocket.config.js'
 import { auth } from '../adapters/index.js'
-import { account as accountData, hint, state, themeColor } from '../state.js'
+import { account as accountData, hint, activeTheme, mutedTone as tone, themeColor } from '../state.js'
+const canSendCode = typeof auth.sendCode === 'function'
+const canRegister = canSendCode && typeof auth.register === 'function'
+const canRecover = canSendCode && typeof auth.recover === 'function'
 const emit = defineEmits(['dirty', 'leave', 'open'])
 const props=defineProps({kind:{type:String,required:true}})
 const headerPadding = useHeaderPadding()
@@ -24,7 +27,6 @@ const register=computed(()=>props.kind==='register'), recover=computed(()=>props
 const usesCode=computed(()=>register.value||recover.value||method.value==='code')
 const title=computed(()=>register.value?'创建账号':recover.value?'找回密码':'欢迎回来')
 const actionLabel=computed(()=>register.value?'创建账号':recover.value?'重置密码':'登录')
-const tone=computed(()=>state.theme==='dark'?'light':'muted')
 function mockFields() {
   account.value = 'demo@example.test'
   nickname.value = '新用户'
@@ -101,15 +103,15 @@ watch(account, () => {
 onUnmounted(() => { active = false; clearInterval(timer) })
 </script>
 <template>
-<view class="surface auth" :class="state.theme">
- <view class="auth-top" :style="headerPadding"><button class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
+<view class="surface auth" :class="activeTheme.base" :style="activeTheme.style">
+ <view class="auth-top" :style="headerPadding"><button role="button" class="icon-button" aria-label="返回账户中心" @tap="$emit('leave', 'home')"><NovaIcon name="chevron-left" :tone="tone" /></button><text class="brand-name">{{config.brand.name}}</text></view>
  <view class="auth-content">
-  <view class="auth-mark"><image v-if="config.brand.logo" class="auth-logo" mode="aspectFit" :src="config.brand.logo" /><NovaIcon v-else name="sparkles" :tone="state.theme==='dark'?'muted':'white'" :size="26" /></view>
+  <view class="auth-mark"><image v-if="config.brand.logo" class="auth-logo" mode="aspectFit" :src="config.brand.logo" /><NovaIcon v-else name="sparkles" :tone="activeTheme.base==='dark'?'muted':'white'" :size="26" /></view>
   <text class="title">{{title}}</text>
   <text v-if="auth.demo" class="note auth-intro">仅使用演示数据，不发送真实邮件或保存密码。</text>
   <view v-if="kind==='login'" class="methods" aria-label="登录方式">
    <text class="mode-label">{{method==='password'?'密码登录':'邮箱验证码登录'}}</text>
-   <button class="link" @tap="setMethod(method==='password'?'code':'password')">{{method==='password'?'改用邮箱验证码':'改用密码登录'}}</button>
+   <button v-if="canSendCode" class="link" @tap="setMethod(method==='password'?'code':'password')">{{method==='password'?'改用邮箱验证码':'改用密码登录'}}</button>
   </view>
   <form @submit="submit">
    <view class="fields">
@@ -119,13 +121,13 @@ onUnmounted(() => { active = false; clearInterval(timer) })
     <view v-if="register||recover||method==='password'" class="field"><text>{{recover?'新密码':'密码'}}</text><view class="input-row password-row"><input v-model="password" :password="!visible" aria-label="密码" placeholder="请输入密码" maxlength="100" /><button class="btn password-toggle" :aria-label="visible?'隐藏密码':'显示密码'" @tap="visible=!visible"><NovaIcon :name="visible?'eye-off':'eye'" :tone="tone" /></button></view></view>
     <checkbox-group v-if="register" @change="selectTerms"><label class="consent"><checkbox value="yes" :checked="agree" :color="themeColor" /><text>{{auth.demo?'同意仅使用虚构资料体验，不创建真实账号':'确认使用上述资料注册账号'}}</text></label></checkbox-group>
     <text v-if="error" class="error" role="alert">{{error}}</text>
-    <button class="btn primary" form-type="submit" :disabled="busy">{{busy?'处理中…':actionLabel}}</button>
+    <button role="button" class="btn primary" form-type="submit" :disabled="busy">{{busy?'处理中…':actionLabel}}</button>
    </view>
   </form>
   <view class="form-links">
    <button v-if="auth.demo" class="link" @tap="mockFields">填入演示资料</button>
-   <button v-if="kind==='login'" class="link" @tap="openAuth('register')">注册</button>
-   <button v-if="kind==='login'" class="link" @tap="openAuth('recover')">忘记密码</button>
+   <button v-if="kind==='login' && canRegister" class="link" @tap="openAuth('register')">注册</button>
+   <button v-if="kind==='login' && canRecover" class="link" @tap="openAuth('recover')">忘记密码</button>
    <button v-if="kind!=='login'" class="link" @tap="$emit('leave', 'login')">返回登录</button>
   </view>
  </view>

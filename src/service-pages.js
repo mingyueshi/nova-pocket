@@ -1,7 +1,7 @@
 // This subpackage belongs to the configured service pages. Other packages are left to the app.
 export const serviceRoot = 'pocket-services'
 const reserved = new Set(['home', 'services', 'messages', 'mine', 'profile', 'security', 'settings',
-  'activity', 'privacy', 'help', 'demo', 'message', 'orders', 'order', 'reviews', 'review', 'stats',
+  'activity', 'notifications', 'privacy', 'help', 'demo', 'message', 'orders', 'order', 'reviews', 'review', 'stats',
   'login', 'register', 'recover'])
 
 export function configuredServicePages(settings) {

@@ -2,7 +2,7 @@ import { chmod, lstat, mkdir, mkdtemp, readdir, rename, rm, rmdir } from 'node:f
 import { dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
-export const templateNames = ['basic', 'reading-room']
+export const templateNames = ['basic', 'reading-room', 'embedded']
 
 async function create(target, writeProject) {
   const existing = await lstat(target).catch(error => {

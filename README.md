@@ -31,9 +31,22 @@ npm ci
 
 创建命令接受新目录或空目录，遇到已有文件、非空目录或作为目标的符号链接会退出。每个模板都附有自己的启动、换品牌和验收说明。[通用账户中心](examples/basic/standalone.md) · [青禾书房接入示例](examples/reading-room/README.md)
 
+### 已有 UniApp 项目接入
+
+山岚步道示例保留宿主的原生「路线 / 我的」底栏、登录页和会员存储。「我的」使用用户中心的资料和消息页面。路线详情也能打开一条通知，访客登录后回到该通知，再返回原路线。
+
+```sh
+npm run create -- ../my-trail --template embedded
+cd ../my-trail
+npm ci
+npm run dev:h5
+```
+
+接入时配置 `host.accountTab`、`host.loginPage`，把适配器映射到现有账户服务。资料编辑和消息入口跟随适配器能力。安全、活动、通知偏好、隐私与帮助通过 `accountPages` 指向宿主已注册的普通页面，未接入的能力在菜单和详情链接中同时关闭。通知偏好的读取、保存与生效由宿主实现。独立模板仍使用自己的导航与认证页面。[宿主接入与双端验收](examples/embedded/standalone.md) · [宿主路由](examples/embedded/src/pages.json) · [会员适配器](examples/embedded/src/adapters/index.js)
+
 ### 分发项目创建器
 
-在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、两种模板和各自的使用说明打成一个版本包，输出在 `dist/creator/`。
+在仓库根目录运行以下命令。它使用 `npm pack` 将创建器、三种模板和各自的使用说明打成一个版本包，输出在 `dist/creator/`。
 
 ```sh
 npm run pack:creator
@@ -58,6 +71,9 @@ npm run build:mp-weixin
 
 H5 产物在 `dist/build/h5`。微信小程序产物在 `dist/build/mp-weixin`，可导入微信开发者工具预览。项目未配置正式小程序 AppID，真机预览或发布时按需配置自己的 AppID。Android 返回确认、侧滑及 WXSS 表现请在目标微信真机上验收。
 
+basic 的 H5 验收覆盖 320 像素窄屏、24 像素最小字号、20 字符昵称和键盘占位。脚本实际点击保存与登录，并核对取消离开后的草稿和消息详情返回后的滚动位置。微信模拟器步骤及 iOS、Android 真实输入法和返回手势的核对条件见[移动端验收](docs/mobile-acceptance.md)。
+
+
 ## 换品牌与导航
 
 修改 `src/pocket.config.js` 后重新启动开发服务或构建。默认配置保留四个底栏入口、三个业务模块和应用内演示设置。
@@ -65,13 +81,67 @@ H5 产物在 `dist/build/h5`。微信小程序产物在 `dist/build/mp-weixin`�
 | 配置 | 用途 |
 | --- | --- |
 | `brand.name`、`brand.subtitle`、`brand.logo` | 品牌名称、H5 标题副标题、可选 Logo。将图片放入 `src/static/`，路径写成 `/static/brand.png` |
-| `defaultTheme`、`defaultLayout` | 默认主题选 `blue / teal / dark`，首页布局选 `overview / shortcuts / minimal` |
+| `defaultTheme`、`defaultLayout` | 默认主题选内置的 `blue / teal / dark` 或 `themes` 中的键，首页布局选 `overview / shortcuts / minimal` |
 | `tabs` | 内置入口的键、显示名称和图标。可以删除或重排，首个可用入口是默认页，至少需保留一项 |
 | `shortcuts` | 首页快捷入口的目标、名称、图标和说明，已关闭的目标会自动隐藏 |
 | `modules` | 订单 `orders`、评价 `reviews`、统计 `stats` 各自的入口文案、图标与 `enabled` 开关。设置 `requiresLogin: true` 可要求访客登录，详情直达同样生效 |
 | `demoSettings` | 是否展示演示控制页。只有登录和消息都使用演示适配器时才开放 |
 
 例如，将 `modules.reviews.enabled` 改为 `false`，订单详情中的评价按钮会一同隐藏，已有评价链接会显示返回账户中心的入口。关闭全部服务会移除服务底栏。三个模块的界面分别参与条件编译，订单与评价共用示例订单数据。构建命令也会把品牌标题同步到 UniApp 的 `manifest.json` 和 `pages.json`，其他平台参数仍在这两个文件中配置。
+
+### 配置品牌主题
+
+在 `src/pocket.config.js` 增加主题并将其设为默认值。下例来自青禾书房，首页的借阅入口使用金棕图标，选中底栏文字和登录按钮文字使用茶褐色，身份卡使用深棕纯色背景。[完整配置](examples/reading-room/src/pocket.config.js)
+
+```js
+defaultTheme: 'tea',
+themes: {
+  tea: {
+    label: '书房茶褐', base: 'teal', brand: '#804322', iconAccent: '#98652D',
+    soft: '#F6EBDD', canvas: '#FAF7F1', hero: '#503A2C', heroStyle: 'solid',
+  },
+},
+```
+
+| 字段 | 作用 |
+| --- | --- |
+| `label`、`base` | 必填。名称出现在「我的 → 账户设置 → 外观」。基础主题取 `blue`、`teal` 或 `dark`，提供未覆盖的颜色 |
+| `brand`、`brandOn` | 主按钮底色与文字色。品牌色也用于当前底栏文字、头像文字和认证控件 |
+| `iconAccent` | 选中底栏、快捷入口和业务菜单的图标色。省略时优先使用本主题指定的 `brand`，再沿用基础主题的强调色 |
+| `soft`、`canvas` | 头像、图标等浅底色与页面底色 |
+| `hero`、`heroStart`、`heroStyle` | 身份卡底色与渐变起点。样式取 `solid` 或 `gradient`。独立账户默认渐变，嵌入宿主默认纯色 |
+
+主题键以小写字母开头，可含小写字母、数字和连字符。颜色填写六位十六进制值。改完后重新启动开发服务或构建，H5 和微信使用随包的本地图标。独立模板可在外观选择器中来回切换已注册主题。嵌入模板由宿主指定主题，原生底栏继续读宿主的 `pages.json`。[山岚步道接入步骤](examples/embedded/standalone.md#移入已有项目)
+
+生成的 JavaScript 配置通过 JSDoc 引用 `PocketConfig`，编辑器能补全主题字段和区块类型。两端构建开始时会校验默认主题、基础主题、颜色、身份卡样式和默认布局。比如把默认键拼成 `teaa` 会报 `pocket.config.js: defaultTheme 找不到主题 teaa`，用颜色名设置图标则会指出 `themes.tea.iconAccent`。[类型声明](src/pocket-types.d.ts)
+
+### 配置首页和「我的」区块
+
+在 `src/pocket.config.js` 分别设置 `blocks.home` 和 `blocks.mine`。数组顺序就是屏幕顺序，删去一项或设置 `enabled: false` 即可隐藏。单页留空数组会清空内容区。省略该页则沿用原有布局预设、快捷入口与宿主插槽。自定义首页的设置入口由菜单配置，旧首页保留标题栏的设置按钮。
+
+```js
+blocks: {
+  home: [
+    { type: 'menu', title: '借阅服务', entries: ['loans'] },
+    'identity',
+  ],
+  mine: [
+    { type: 'identity', actions: false },
+    'business',
+    { type: 'menu', title: '账户管理', entries: ['profile', 'settings'] },
+  ],
+}
+```
+
+| 区块 | 内容 |
+| --- | --- |
+| `identity` | 身份卡。设 `actions: false` 仅展示身份，编辑或登录入口可放在其他位置 |
+| `status` | 当前账户状态及相应操作，所需能力可用时显示 |
+| `shortcuts`、`management`、`more`、`demo` | 已配置的快捷入口、账户管理、更多和演示菜单。空分组自动隐藏 |
+| `menu` | 提供 `title` 和有序的 `entries`，引用底栏键、账户入口或已启用的服务键。名称、图标和说明沿用入口定义，可添加多个不同分组 |
+| `business` | 在该位置渲染 AccountScreen 的 `#business` 插槽，内容与点击后的导航由宿主页提供 |
+
+青禾书房复用已注册的 `loans` 服务，首页打开借阅页后可直接返回首页。山岚步道用同一个插槽把自己的行程按钮放在身份卡与行程通知之间。[书房配置](examples/reading-room/src/pocket.config.js) · [宿主页插槽](examples/embedded/src/pages/trail/mine.vue)
 
 ### 添加自己的服务页面
 
@@ -102,6 +172,8 @@ import { request } from './my-request.js' // 接入方自己的请求函数
 
 export const { auth, messages } = createHttpAdapters(request)
 ```
+
+自写适配器时，可在 `export const auth = { ... }` 上方加 `/** @satisfies {import('#pocket/types').AuthAdapter} */`，在消息适配器上使用 `MessageAdapter`。前者提示会话用户、表单参数与可选能力，后者区分完整列表与分页接口。示例既支持同步返回，也支持 Promise。已有宿主可以复制类型文件，用相对于适配器的路径引用它。[类型声明](src/pocket-types.d.ts) · [山岚步道适配器](examples/embedded/src/adapters/index.js)
 
 请求函数签名为 `request(method, path, body?)`，负责 API 地址、平台凭据和错误转换，成功时返回解包后的数据，失败时抛出带可展示消息的 `Error`，并保留 HTTP 状态码 `statusCode`、`status` 或 `response.status`。示例路径集中在 `src/adapters/http.js`。方法可以同步返回或返回 Promise。
 
@@ -156,7 +228,7 @@ npm run icons:check
 
 图标名单在 `src/icons.js`。更新 Lucide 或调整图标名单后，运行 `npm run icons:sync` 生成色调变体，并提交对应资源。
 
-CI 用同一个 `.tgz` 在两个没有检出源码的任务里分别生成项目，核对锁文件、README、许可证及书房 API，并检查重复创建能保留下游编辑。两个项目都从 `npm ci` 开始，换品牌并构建 H5 和微信小程序。Chromium 分别验证通用账户的登录、昵称与消息已读，以及两位读者打开同一条借阅分享链接。[通用账户验收](examples/basic/standalone.md#构建和验收) · [书房验收](examples/reading-room/standalone.md#构建和验收)
+CI 用同一个 `.tgz` 在三个没有检出源码的任务里分别生成项目，核对锁文件、README、许可证及书房 API，并检查重复创建能保留下游编辑。三个项目都从 `npm ci` 开始，换品牌并构建 H5 和微信小程序。Chromium 分别验证通用账户的登录、昵称与消息已读，两位读者打开同一条借阅分享链接，以及宿主的登录回跳、原生底栏和通知偏好。[通用账户验收](examples/basic/standalone.md#构建和验收) · [书房验收](examples/reading-room/standalone.md#构建和验收)
 
 ## 项目结构
 

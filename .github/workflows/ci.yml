@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       basic: ${{ steps.reference.outputs.basic }}
+      embedded: ${{ steps.reference.outputs.embedded }}
       reading-room: ${{ steps.reference.outputs.reading-room }}
     steps:
       - uses: actions/checkout@v6
@@ -40,10 +41,11 @@ jobs:
       - name: Record expected contents from the source template
         id: reference
         run: |
-          for template in basic reading-room; do
+          for template in basic reading-room embedded; do
             target="$RUNNER_TEMP/reference-$template"
             npm run create -- "$target" --template "$template"
-            files=(package.json package-lock.json .gitignore README.md LICENSE src/static/icons/LICENSE.txt src/pocket.config.js check-h5.js)
+            files=(package.json package-lock.json .gitignore README.md LICENSE src/static/icons/LICENSE.txt src/pocket.config.js docs/mobile-acceptance.md check-h5.js)
+            if [[ "$template" == basic ]]; then files+=(check-mobile.js); fi
             if [[ "$template" == reading-room ]]; then files+=(server.js); fi
             {
               echo "$template<<END"
@@ -65,6 +67,9 @@ jobs:
           - template: basic
             original: Nova Pocket
             brand: 岚山账户中心
+          - template: embedded
+            original: 山岚步道
+            brand: 松溪步道
           - template: reading-room
             original: 青禾书房
             brand: 溪桥阅览室
@@ -140,19 +145,32 @@ jobs:
           import config from './src/pocket.config.js'
           const read = path => readFileSync('dist/build/' + path, 'utf8')
           assert.ok(read('h5/index.html').includes('<title>' + process.env.BRAND + ' · ' + config.brand.subtitle + '</title>'))
-          assert.equal(JSON.parse(read('mp-weixin/pages/index/index.json')).navigationBarTitleText, process.env.BRAND)
+          const { configuredThemes } = await import('./src/themes.js')
+          const { iconSource } = await import('./src/icons.js')
+          for (const { iconAccent } of configuredThemes(config).values()) {
+            const asset = iconSource('layers', iconAccent)
+            for (const target of ['h5', 'mp-weixin']) {
+              assert.ok(read(target + asset).toLowerCase().includes('stroke="' + iconAccent.toLowerCase() + '"'), target + asset)
+            }
+          }
+          const app = JSON.parse(read('mp-weixin/app.json'))
+          if (config.host) {
+            assert.deepEqual(app.tabBar.list.map(tab => '/' + tab.pagePath), ['/pages/trail/routes', config.host.accountTab])
+            assert.ok(app.pages.includes(config.host.loginPage.slice(1)))
+            assert.ok(app.pages.includes(config.accountPages.notifications.slice(1)))
+            assert.ok(!app.pages.some(page => page.startsWith('pages/auth/')))
+          } else assert.equal(JSON.parse(read('mp-weixin/pages/index/index.json')).navigationBarTitleText, process.env.BRAND)
           const { subPackages = [] } = JSON.parse(read('mp-weixin/app.json'))
           const services = subPackages.find(group => group.root === 'pocket-services')
-          if (process.env.TEMPLATE === 'basic') assert.equal(services, undefined)
+          if (process.env.TEMPLATE !== 'reading-room') assert.equal(services, undefined)
           else assert.ok(services.pages.includes('loans/index'))
           JS
           cd dist/build/mp-weixin
           if [[ "$TEMPLATE" == reading-room ]]; then
-            test -s components/ServiceStats.wxml
             test -s pocket-services/loans/index.wxml
           else
-            test ! -e components/ServiceStats.wxml
             test ! -e pocket-services/loans
           fi
+          test ! -e components/ServiceStats.wxml
           test ! -e components/ServiceOrders.wxml
           test ! -e components/ServiceReviews.wxml

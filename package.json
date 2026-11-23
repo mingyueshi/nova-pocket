@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#pocket/types": { "types": "./src/pocket-types.d.ts" },
     "#pocket/demo-adapters": "./src/adapters/demo.js"
   },
   "scripts": {

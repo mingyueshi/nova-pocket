@@ -1,0 +1,19 @@
+{
+  "pages": [
+    { "path": "pages/trail/routes", "style": { "navigationBarTitleText": "路线" } },
+    { "path": "pages/trail/mine", "style": { "navigationStyle": "custom", "disableScroll": true } },
+    { "path": "pages/trail/walk", "style": { "navigationBarTitleText": "河岸晨行" } },
+    { "path": "pages/trail/login", "style": { "navigationBarTitleText": "会员登录" } },
+    { "path": "pages/trail/preferences", "style": { "navigationBarTitleText": "通知偏好" } },
+    { "path": "pages/account/detail", "style": { "navigationStyle": "custom", "disableScroll": true } },
+    { "path": "pages/account/profile", "style": { "navigationBarTitleText": "个人资料", "navigationStyle": "custom", "disableScroll": true, "mp-weixin": { "disableSwipeBack": true } } }
+  ],
+  "tabBar": {
+    "color": "#5e6862", "selectedColor": "#23594c", "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/trail/routes", "text": "路线" },
+      { "pagePath": "pages/trail/mine", "text": "我的" }
+    ]
+  },
+  "globalStyle": { "navigationBarTextStyle": "white", "navigationBarBackgroundColor": "#23594c", "backgroundColor": "#f3f6f2" }
+}

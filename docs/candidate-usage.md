@@ -29,7 +29,7 @@ npm exec --offline --yes --package=./{{module}} -- install-nova-pocket ../my-uni
 
 ## 在独立示例中复核升级
 
-在附件目录运行以下命令。验收使用生成项目的临时副本，先在无模块的宿主中安装当前包，再从随附旧版升级。脚本构建两端、比较宿主文件，并在浏览器中检查升级前保存的会员资料、行程和通知偏好。
+在附件目录运行以下命令。验收使用生成项目的临时副本，先在无模块的宿主中安装当前包，再从上一批 0.1.1 升级。另两份历史包列于 `candidate.json` 的 `upgradeBaselines` 中，可替换命令中的旧包路径复测。脚本构建两端、比较宿主文件，并在浏览器中检查升级前保存的会员资料、行程和通知偏好。
 
 ```sh
 npm exec --offline --yes --package=./{{creator}} -- create-nova-pocket ./trail-check --template embedded

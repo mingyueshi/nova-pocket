@@ -40,19 +40,25 @@ try {
   await rm(snapshot)
   const creator = await pack('creator', 'package.json', 'scripts/creator/changelog.md')
   const module = await pack('module', 'module/package.json', 'module/changelog.md')
-  const baselineName = 'nova-pocket-module-0.1.0-rc.1.tgz'
-  const baselineFile = 'baseline/' + baselineName
+  const fixtures = join(source, 'test/fixtures')
+  const baselines = JSON.parse(await readFile(join(fixtures, 'upgrade-baselines.json'), 'utf8'))
+  const upgradeBaselines = []
   await mkdir(join(stage, 'baseline'))
-  await copyFile(join(source, 'test/fixtures', baselineName), join(stage, baselineFile))
-  const upgradeBaseline = { file: baselineFile, sha256: await digest(join(stage, baselineFile)) }
-  const manifest = { commit, packages: { creator, module }, upgradeBaseline }
+  for (const { file, sha256 } of baselines) {
+    const target = 'baseline/' + file
+    await copyFile(join(fixtures, file), join(stage, target))
+    assert.equal(await digest(join(stage, target)), sha256, '旧模块包校验失败：' + file)
+    upgradeBaselines.push({ file: target, sha256 })
+  }
+  const upgradeBaseline = upgradeBaselines[0]
+  const manifest = { commit, packages: { creator, module }, upgradeBaseline, upgradeBaselines }
   await writeFile(join(stage, 'candidate.json'), JSON.stringify(manifest, null, 2) + '\n')
   const guide = await readFile(join(source, 'docs/candidate-usage.md'), 'utf8')
   await writeFile(join(stage, 'README.md'), guide.replaceAll('{{creator}}', creator.file)
-    .replaceAll('{{module}}', module.file).replaceAll('{{baseline}}', baselineFile).replaceAll('{{commit}}', commit)
+    .replaceAll('{{module}}', module.file).replaceAll('{{baseline}}', upgradeBaseline.file).replaceAll('{{commit}}', commit)
     .replaceAll('{{creatorSha256}}', creator.sha256).replaceAll('{{moduleSha256}}', module.sha256))
 
-  const files = [creator.file, module.file, baselineFile, 'candidate.json', 'README.md']
+  const files = [creator.file, module.file, ...upgradeBaselines.map(item => item.file), 'candidate.json', 'README.md']
   const sums = []
   for (const file of files) sums.push(await digest(join(stage, file)) + '  ' + file)
   await writeFile(join(stage, 'SHA256SUMS'), sums.join('\n') + '\n')

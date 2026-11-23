@@ -7,7 +7,7 @@
 在含 `src/pages.json` 的宿主根目录运行。收到候选附件时，用附件里的实际文件名替换命令中的包名。
 
 ```sh
-npm exec --offline --yes --package=./nova-pocket-module-0.1.1.tgz -- install-nova-pocket .
+npm exec --offline --yes --package=./nova-pocket-module-0.1.2.tgz -- install-nova-pocket .
 ```
 
 安装器只写入 `src/uni_modules/nova-pocket/`。将下面的接线放在宿主自己的文件中。升级时使用新版包再次运行安装命令并重新构建，模块目录会整体替换。

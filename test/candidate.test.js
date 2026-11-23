@@ -33,6 +33,12 @@ test('candidate archives come from the recorded commit and cannot replace a diff
     assert.ok(item.file.includes(commit))
     assert.equal(createHash('sha256').update(await readFile(join(dir, item.file))).digest('hex'), item.sha256)
   }
+  const baselines = JSON.parse(await readFile(join(repo, 'test/fixtures/upgrade-baselines.json'), 'utf8'))
+  assert.deepEqual(manifest.upgradeBaselines, baselines.map(item => ({ ...item, file: 'baseline/' + item.file })))
+  assert.deepEqual(manifest.upgradeBaseline, manifest.upgradeBaselines[0])
+  for (const item of manifest.upgradeBaselines) {
+    assert.equal(createHash('sha256').update(await readFile(join(dir, item.file))).digest('hex'), item.sha256)
+  }
   const creator = join(dir, manifest.packages.creator.file)
   assert.equal((await run('tar', ['-xOf', creator, 'package/README.md'])).stdout, guide)
   assert.doesNotMatch((await run('tar', ['-tzf', creator])).stdout, /untracked\.txt/)

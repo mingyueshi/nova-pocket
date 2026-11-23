@@ -104,7 +104,7 @@ jobs:
           import { readFileSync } from 'node:fs'
           const manifest = JSON.parse(readFileSync('candidate.json', 'utf8'))
           assert.equal(manifest.commit, process.env.GITHUB_SHA)
-          for (const artifact of [...Object.values(manifest.packages), manifest.upgradeBaseline]) {
+          for (const artifact of [...Object.values(manifest.packages), ...manifest.upgradeBaselines]) {
             assert.equal(createHash('sha256').update(readFileSync(artifact.file)).digest('hex'), artifact.sha256)
           }
           JS
@@ -194,6 +194,7 @@ jobs:
         if: matrix.template == 'embedded'
         working-directory: ${{ runner.temp }}/consumer/project
         run: |
-          older=$(node -p "require('../candidate.json').upgradeBaseline.file")
           newer=$(node -p "require('../candidate.json').packages.module.file")
-          npm run check:module-upgrade -- "../$older" "../$newer"
+          for older in ../baseline/*.tgz; do
+            npm run check:module-upgrade -- "$older" "../$newer"
+          done

@@ -7,7 +7,8 @@ import { writeProject } from '../examples/projects.js'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const { name, version } = JSON.parse(await readFile(join(root, 'module/package.json'), 'utf8'))
-const [older = join(root, 'test/fixtures/nova-pocket-module-0.1.0-rc.1.tgz'),
+const baselines = JSON.parse(await readFile(join(root, 'test/fixtures/upgrade-baselines.json'), 'utf8'))
+const [older = join(root, 'test/fixtures', baselines[0].file),
   newer = join(root, 'dist/module', name + '-' + version + '.tgz')] = process.argv.slice(2)
 const project = await mkdtemp(join(tmpdir(), 'nova-pocket-upgrade-example-'))
 try {

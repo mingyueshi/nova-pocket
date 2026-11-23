@@ -5,7 +5,7 @@ https://nova-pocket-account-demo.mingyueshi.chatgpt.site/
 
 ## 下载候选附件
 
-在 [GitHub Actions](https://github.com/mingyueshi/nova-pocket/actions/workflows/ci.yml) 选择对应提交且验收通过的运行，下载 `nova-pocket-candidate-<完整提交号>`。解压后先按附件 README 校验 `SHA256SUMS`。新建项目使用创建器，已有 UniApp 宿主使用独立模块安装包。两者独立编号，候选附件文件名含提交号；`candidate.json` 记录各自的版本、SHA-256 和主要变化。
+在 [GitHub 预发布](https://github.com/mingyueshi/nova-pocket/releases) 下载候选 ZIP。开发中的候选包可在 [GitHub Actions](https://github.com/mingyueshi/nova-pocket/actions/workflows/ci.yml) 选择对应提交且验收通过的运行，下载 `nova-pocket-candidate-<完整提交号>`。解压后先按附件 README 校验 `SHA256SUMS`。新建项目使用创建器，已有 UniApp 宿主使用独立模块安装包。两者独立编号，候选附件文件名含提交号；`candidate.json` 记录各自的版本、SHA-256 和主要变化。
 
 在仓库运行 `npm run pack:candidate` 可为当前 Git 提交生成同样结构的 `dist/candidates/<完整提交号>/`。打包读取该提交归档的文件。目录中包含两个安装包、使用说明、清单及升级验收所用的旧版模块。下游只需附件就能验证三种模板，并在山岚步道宿主中复核首次安装与跨版本升级。
 
@@ -52,15 +52,15 @@ npm run dev:h5
 
 ### 安装或升级独立用户中心模块
 
-在本仓库运行 `npm run pack:module` 得到 `dist/module/nova-pocket-module-0.1.1.tgz`。把文件放在已有 UniApp 项目根目录，执行以下命令。升级时使用新版本的文件名。
+在本仓库运行 `npm run pack:module` 得到 `dist/module/nova-pocket-module-0.1.2.tgz`。把文件放在已有 UniApp 项目根目录，执行以下命令。升级时使用新版本的文件名。
 
 ```sh
-npm exec --offline --yes --package=./nova-pocket-module-0.1.1.tgz -- install-nova-pocket .
+npm exec --offline --yes --package=./nova-pocket-module-0.1.2.tgz -- install-nova-pocket .
 ```
 
 安装命令只替换 `src/uni_modules/nova-pocket/`。首次接入可先用宿主的 `auth.getSession()` 显示现有会员，并导出 `messages = null` 隐藏消息入口。随后只需在适配器里接入消息列表和已读接口，就能从通知详情登录并回到原记录。山岚步道使用同一模块的公开入口，旧版的资料与消息链接通过宿主转发页继续生效。[模块接线清单](module/README.md) · [山岚步道示例](examples/embedded/standalone.md)
 
-仓库内运行 `npm run pack:module`、`npx playwright-core install --only-shell chromium` 和 `npm run check:module-upgrade` 可重跑升级验收。脚本在临时宿主中依次安装两个实际版本包，分别构建 H5 和微信小程序，并核对宿主文件。浏览器用同一来源从旧版切到新版，验证昵称、提醒偏好、已加入的行程和登录回跳。默认旧包是仓库保存的首个本地候选版；也可在命令后加 `-- <旧包路径> <新包路径>`。[升级脚本](scripts/check-module-upgrade.js)
+仓库内运行 `npm run pack:module`、`npx playwright-core install --only-shell chromium` 和 `npm run check:module-upgrade` 可重跑升级验收。脚本在临时宿主中依次安装两个实际版本包，分别构建 H5 和微信小程序，并核对宿主文件。浏览器用同一来源从旧版切到新版，验证昵称、提醒偏好、已加入的行程和登录回跳。默认旧包来自上一批 0.1.1 附件，CI 还覆盖同版本的前一批附件与 0.1.0-rc.1。也可在命令后加 `-- <旧包路径> <新包路径>`。[升级脚本](scripts/check-module-upgrade.js)
 
 ### 分发项目创建器
 
@@ -73,7 +73,7 @@ npm run pack:creator
 把生成的 `.tgz` 交给下游开发者。对方将它放在自己的工作目录，按实际文件名运行以下命令即可创建项目。创建器从本地包读取模板，应用依赖随后由 `npm ci` 安装。
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.2.tgz -- create-nova-pocket ./my-account --template basic
+npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.3.tgz -- create-nova-pocket ./my-account --template basic
 cd my-account
 npm ci
 ```

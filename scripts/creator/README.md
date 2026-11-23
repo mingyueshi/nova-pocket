@@ -1,11 +1,11 @@
 # Nova Pocket 项目创建器
 
-这个 npm 包提供三种模板。准备好 Node.js 22.13 及以上的 22.x 版本，或 Node.js 24 及以上版本，将收到的 `.tgz` 放入工作目录。以下命令以 0.3.0-rc.2 版为例，请使用实际文件名。
+这个 npm 包提供三种模板。准备好 Node.js 22.13 及以上的 22.x 版本，或 Node.js 24 及以上版本，将收到的 `.tgz` 放入工作目录。以下命令以 0.3.0-rc.3 版为例，请使用实际文件名。
 
 ### 通用账户中心
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.2.tgz -- create-nova-pocket ./my-account --template basic
+npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.3.tgz -- create-nova-pocket ./my-account --template basic
 cd my-account
 npm ci
 npm run dev:h5
@@ -18,7 +18,7 @@ npm run dev:h5
 `reading-room` 提供示例 HTTP API 和两位读者的借阅分享流程。省略 `--template` 也会生成此模板。
 
 ```sh
-npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.2.tgz -- create-nova-pocket ./my-reading-room --template reading-room
+npm exec --offline --yes --package=./create-nova-pocket-0.3.0-rc.3.tgz -- create-nova-pocket ./my-reading-room --template reading-room
 cd my-reading-room
 npm ci
 ```

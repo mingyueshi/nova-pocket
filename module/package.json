@@ -2,7 +2,7 @@
   "id": "nova-pocket",
   "name": "nova-pocket-module",
   "displayName": "Nova Pocket 用户中心",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "使用宿主登录态、品牌和原生底栏的移动端用户中心",
   "type": "module",
   "license": "MIT",

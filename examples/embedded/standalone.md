@@ -20,7 +20,7 @@
 若从候选附件获得模块，请使用其中 README 给出的带提交号的实际文件名。在本示例中可运行 `npm run check:module-upgrade -- <旧模块包> <当前模块包>`，在临时副本验证首次安装、跨版本升级和宿主状态保留。先按上文安装 Chromium。
 
 ```sh
-npm exec --offline --yes --package=./nova-pocket-module-0.1.0.tgz -- install-nova-pocket .
+npm exec --offline --yes --package=./nova-pocket-module-0.1.1.tgz -- install-nova-pocket .
 ```
 
 | 宿主文件 | 山岚步道的接法 |

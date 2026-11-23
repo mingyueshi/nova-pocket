@@ -195,7 +195,7 @@ function explain(title, content) {
      <text class="note">预设只影响当前演示，不使用真实账号或数据。</text>
      <view class="rows extra">
       <picker v-for="[key,label,values] in presets" :key="key" :range="values.map(v=>v[1])" :value="option(key,values)" @change="select(key,values,$event)">
-       <view class="pick-row"><text>{{label}}</text><text class="pick-value">{{values[option(key,values)][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view>
+       <view class="pick-row"><text class="pick-label">{{label}}</text><text class="pick-value">{{values[option(key,values)][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view>
       </picker>
      </view>
      <view class="actions extra"><button v-if="isTab('home')" class="btn primary" @tap="$emit('select-tab', 'home')">查看概览</button><button v-if="isTab('messages')" class="btn" @tap="$emit('select-tab', 'messages')">查看消息</button><button class="link" @tap="restore">重置演示</button></view>
@@ -204,7 +204,7 @@ function explain(title, content) {
     <view v-else-if="route==='profile'"><slot name="profile" /></view>
     <view v-else-if="route==='settings'" class="rows">
      <NovaRow v-if="viewNames.notifications" icon="bell" label="通知偏好" :tone="tone" @select="page('notifications')" />
-     <picker v-if="!host" :range="themes.map(v=>v[1])" :value="option('theme',themes)" @change="select('theme',themes,$event)"><view class="pick-row"><text>外观</text><text class="pick-value">{{themes[option('theme',themes)][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
+     <picker v-if="!host" :range="themes.map(v=>v[1])" :value="option('theme',themes)" @change="select('theme',themes,$event)"><view class="pick-row"><text class="pick-label">外观</text><text class="pick-value">{{themes[option('theme',themes)][1]}}</text><NovaIcon name="chevron-right" :tone="tone" :size="15" /></view></picker>
      <NovaRow v-if="viewNames.privacy" icon="shield-check" label="隐私说明" :tone="tone" @select="page('privacy')" />
      <NovaRow v-if="guest ? canLogin : canLogout" :icon="guest?'log-in':'log-out'" :label="guest?'登录':'退出登录'" :tone="tone" @select="guest?openAuth('login'):logout()" />
     </view>
@@ -227,7 +227,7 @@ function explain(title, content) {
   </view>
  </scroll-view>
  <view v-if="!host" class="tabbar" role="navigation" aria-label="底部导航">
-  <button v-for="[key,label,icon] in tabs" :key="key" role="button" tabindex="0"
+  <button v-for="[key,label,icon] in tabs" :key="key" role="button" tabindex="0" class="tab-button"
     :class="{active:tab===key}" :aria-current="tab===key?'page':undefined"
     :aria-label="key==='messages' && !guest && state.scenario==='normal' && unread ? label+'，'+unread+' 条未读通知' : label"
     @tap="$emit('select-tab', key)" @keydown.enter.prevent="$emit('select-tab', key)" @keydown.space.prevent="$emit('select-tab', key)">
@@ -244,10 +244,10 @@ function explain(title, content) {
 .account-app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}.screen{flex:1 1 0%;height:0;min-height:0;min-width:0;width:100%}.shell{width:100%;padding:calc(12px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 23px max(16px,env(safe-area-inset-left))}
 .app-head{display:flex;align-items:center;gap:10px;min-height:54px;margin-bottom:13px}.heading{flex:1;min-width:0}.app-head .note{margin-top:4px}.sub-head{display:grid;grid-template-columns:44px minmax(0,1fr) 44px}.sub-head .heading{grid-column:2;text-align:center;margin:0}.sub-head .title{font-size:20px}
 .account-grid{display:flex;flex-direction:column;gap:15px}
-.actions{position:relative;display:flex;gap:10px;flex-wrap:wrap}.actions{align-items:stretch;flex-direction:column}.actions button{width:100%}
+.actions{position:relative;display:flex;gap:10px;flex-wrap:wrap}.actions{align-items:stretch;flex-direction:column}.actions .btn,.actions .link{width:100%}
 .status-panel{display:grid;grid-template-columns:39px minmax(0,1fr);align-items:center;gap:11px}.status-icon{width:39px;height:39px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:11px;background:var(--soft)}.status-copy{min-width:0}.status-action{grid-column:1 / -1;width:100%;min-height:44px}.section-title{display:block;font-size:16px;font-weight:750}.block-title{margin:0 0 8px}.rows{border:1px solid var(--line);background:var(--card);border-radius:15px;overflow:hidden}
-.details{display:flex;flex-direction:column;gap:15px}.filter{margin-bottom:11px}.extra{margin-top:12px}.pick-row{min-height:52px;display:flex;align-items:center;gap:7px;padding:8px 12px;font-size:15px;font-weight:680;border-bottom:1px solid var(--line)}.pick-row:active{background:var(--soft)}.pick-row>text:first-child{min-width:0;flex:1;overflow-wrap:anywhere}.pick-value{min-width:0;max-width:60%;text-align:right;overflow-wrap:anywhere}.pick-value,.pick-row switch{margin-left:auto;color:var(--muted);font-weight:500}.pick-row switch{flex:none}
-.tabbar{flex:none;width:100%;display:grid;grid-auto-columns:minmax(0,1fr);grid-auto-flow:column;padding:4px 8px max(4px,env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}.tabbar button{width:100%;min-width:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:53px;font-size:12px;font-weight:730;background:transparent;color:var(--muted);padding:0}.tab-icon{display:grid;place-items:center;width:49px;min-height:28px;border-radius:10px}.tabbar .active{color:var(--brand)}.active .tab-icon{background:var(--soft)}
+.details{display:flex;flex-direction:column;gap:15px}.filter{margin-bottom:11px}.extra{margin-top:12px}.pick-row{min-height:52px;display:flex;align-items:center;gap:7px;padding:8px 12px;font-size:15px;font-weight:680;border-bottom:1px solid var(--line)}.pick-row:active{background:var(--soft)}.pick-label{min-width:0;flex:1;overflow-wrap:anywhere}.pick-value{min-width:0;max-width:60%;text-align:right;overflow-wrap:anywhere}.pick-value{margin-left:auto;color:var(--muted);font-weight:500}
+.tabbar{flex:none;width:100%;display:grid;grid-auto-columns:minmax(0,1fr);grid-auto-flow:column;padding:4px 8px max(4px,env(safe-area-inset-bottom));background:var(--card);border-top:1px solid var(--line)}.tabbar .tab-button{width:100%;min-width:0;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:53px;font-size:12px;font-weight:730;background:transparent;color:var(--muted);padding:0}.tab-icon{display:grid;place-items:center;width:49px;min-height:28px;border-radius:10px}.tabbar .active{color:var(--brand)}.active .tab-icon{background:var(--soft)}
 .tab-symbol,.unread-badge{grid-area:1/1}
 .unread-badge{position:relative;align-self:start;justify-self:end;display:flex;align-items:center;justify-content:center;min-width:17px;min-height:17px;margin-right:1px;padding:0 3px;border-radius:100px;background:var(--brand);color:var(--brand-on);font-size:10px;line-height:1.4;text-align:center}
 .service-banner{background:linear-gradient(115deg,var(--hero-start),var(--hero));color:#fff;border-radius:19px;padding:17px}.service-symbol{display:flex;align-items:center;justify-content:center;width:41px;height:41px;border-radius:11px;background:#ffffff24;margin-bottom:9px}.service-title,.service-note{display:block}.service-title{font-size:20px;font-weight:780}.service-note{margin-top:4px;font-size:14px;color:#eaf1ff}
@@ -256,6 +256,6 @@ function explain(title, content) {
 .account-app.host-tab{height:calc(100vh - var(--window-bottom,0px));height:calc(100dvh - var(--window-bottom,0px))}
 .screen :deep(.uni-scroll-view){scrollbar-gutter:stable both-edges}
 /* #endif */
-@media(min-width:760px){.shell{padding-left:clamp(20px,4vw,56px);padding-right:clamp(20px,4vw,56px)}.account-grid{gap:19px}.app-head .title{font-size:29px}.app-head.sub-head .title{font-size:20px}.status-action,.actions button{width:fit-content;min-width:128px}}
+@media(min-width:760px){.shell{padding-left:clamp(20px,4vw,56px);padding-right:clamp(20px,4vw,56px)}.account-grid{gap:19px}.app-head .title{font-size:29px}.app-head.sub-head .title{font-size:20px}.status-action,.actions .btn,.actions .link{width:fit-content;min-width:128px}}
 @media(max-width:340px){.shell{padding-left:11px;padding-right:11px}}
 </style>

@@ -52,13 +52,13 @@ npm run dev:h5
 
 ### 安装或升级独立用户中心模块
 
-在本仓库运行 `npm run pack:module` 得到 `dist/module/nova-pocket-module-0.1.0.tgz`。把文件放在已有 UniApp 项目根目录，执行以下命令。升级时使用新版本的文件名。
+在本仓库运行 `npm run pack:module` 得到 `dist/module/nova-pocket-module-0.1.1.tgz`。把文件放在已有 UniApp 项目根目录，执行以下命令。升级时使用新版本的文件名。
 
 ```sh
-npm exec --offline --yes --package=./nova-pocket-module-0.1.0.tgz -- install-nova-pocket .
+npm exec --offline --yes --package=./nova-pocket-module-0.1.1.tgz -- install-nova-pocket .
 ```
 
-安装命令只替换 `src/uni_modules/nova-pocket/`。首次接入在宿主配置品牌、适配器和账户页面，保留自己的登录页、会员存储、底栏及构建入口。山岚步道使用同一模块的公开入口，旧版的资料与消息链接通过宿主转发页继续生效。[模块接线清单](module/README.md) · [山岚步道示例](examples/embedded/standalone.md)
+安装命令只替换 `src/uni_modules/nova-pocket/`。首次接入可先用宿主的 `auth.getSession()` 显示现有会员，并导出 `messages = null` 隐藏消息入口。随后只需在适配器里接入消息列表和已读接口，就能从通知详情登录并回到原记录。山岚步道使用同一模块的公开入口，旧版的资料与消息链接通过宿主转发页继续生效。[模块接线清单](module/README.md) · [山岚步道示例](examples/embedded/standalone.md)
 
 仓库内运行 `npm run pack:module`、`npx playwright-core install --only-shell chromium` 和 `npm run check:module-upgrade` 可重跑升级验收。脚本在临时宿主中依次安装两个实际版本包，分别构建 H5 和微信小程序，并核对宿主文件。浏览器用同一来源从旧版切到新版，验证昵称、提醒偏好、已加入的行程和登录回跳。默认旧包是仓库保存的首个本地候选版；也可在命令后加 `-- <旧包路径> <新包路径>`。[升级脚本](scripts/check-module-upgrade.js)
 

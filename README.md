@@ -9,6 +9,8 @@ https://nova-pocket-account-demo.mingyueshi.chatgpt.site/
 
 在仓库运行 `npm run pack:candidate` 可为当前 Git 提交生成同样结构的 `dist/candidates/<完整提交号>/`。打包读取该提交归档的文件。目录中包含两个安装包、使用说明、清单及升级验收所用的旧版模块。下游只需附件就能验证三种模板，并在山岚步道宿主中复核首次安装与跨版本升级。
 
+iPhone 12 Pro Max 的中文输入、Safari 侧滑、VoiceOver、长列表返回及微信内大字号结果见 [0.3.0-rc.3 真机验收记录](docs/validation/2026-11-24-rc3-ios.md)。
+
 ## 快速启动
 
 使用 Node.js 22.13+（22.x）或 24 及以上版本，在 nova-pocket 目录执行以下命令。
